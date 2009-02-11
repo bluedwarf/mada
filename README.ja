@@ -1,0 +1,19 @@
+
+=== ライセンス ===
+
+GNU Lesser General Public License version 3 を適用する。
+詳細は、COPYRIGHT.LESEER 及び COPYRIGHT を参照のこと。
+
+=== コーディング規約 ===
+
+* コーディングスタイル
+ stroustrupスタイルを用いる。
+ http://www.research.att.com/~bs/bs_faq2.html#layout-style
+
+ ただし、インデントには4文字の空白を用いる。
+
+* 文字コード
+ ソースコード中の文字コードには UTF-8 を用いる
+
+* 改行コード
+ 改行コードには、UNIXで標準の LF(\n, 0x0a) を用いる
