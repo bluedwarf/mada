@@ -22,15 +22,181 @@
 #ifndef _MADA_MAPPED_ARRAY_HPP_
 #define _MADA_MAPPED_ARRAY_HPP_
 
+#define INITIAL_MAPPED_SIZE (1024)
+#define RESIZE_SIZE (1024)
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 namespace mada
 {
-class MappedArray
+template <class T> class MappedArray
 {
 private:
+    T* array;
+    int fd;
+    size_t mapped_size;
+    size_t size;
 
+    // Copy is forbidden.
+    MappedArray(const MappedArray &a);
+    MappedArray &operator=(const MappedArray &a);
+
+    void resize(size_t new_size) throw (int);
 public:
+    MappedArray(const char *filename) throw (int);
+    ~MappedArray() throw (int);
 
+    void clear() throw (int);
+    T &operator[](size_t i) throw (int);
+};
+
+template <class T>
+MappedArray<T>::MappedArray (const char *filename) throw (int)
+{
+    struct stat st;
+
+    if (stat(filename, &st) != 0 || st.st_size == 0) {
+        // The specified file doesn't exist. Create a new file.
+
+        if ((fd = open(filename, O_RDWR | O_CREAT, 0666)) == -1)
+            throw 1; // Failed to create the specified file.
+
+        if (lseek(fd, INITIAL_MAPPED_SIZE * sizeof(T), SEEK_SET) < 0) {
+            close(fd);
+            throw 2; // Failed to expand the file size.
+        }
+
+        T c;
+        if (read(fd, &c, sizeof(T)) == -1)
+            c = 0;
+
+        if (write(fd, &c, sizeof(T)) == -1) {
+            close(fd);
+            throw 3; // Failed to write a new value.
+        }
+
+        mapped_size = INITIAL_MAPPED_SIZE;
+        size = 0;
+    } else {
+        // Open the existing file as an array.
+
+        mapped_size = size = st.st_size / sizeof(T);
+        if ((fd = open(filename, O_RDWR)) == -1)
+            throw 4; // Failed to open the specified file.
+    }
+
+    array = (T*) mmap(NULL, mapped_size * sizeof(T), PROT_READ | PROT_WRITE,
+                      MAP_SHARED, fd, 0);
+    if (array == MAP_FAILED) {
+        close(fd);
+        throw 5; // Failed to map the specified file to an array.
+    }
 }
+
+template <class T>
+MappedArray<T>::~MappedArray() throw (int)
+{
+    if (msync(array, mapped_size * sizeof(T), 0) == -1)
+        throw 1; // Failed to write the content of array to file.
+
+    if (munmap(array, mapped_size * sizeof(T)) == -1)
+        throw 2; // Failed to release the allocated array.
+
+    if (ftruncate(fd, size * sizeof(T)) == -1)
+        throw 3; // Failed to truncate the file size.
+
+    if (close(fd) == -1)
+        throw 4; // Failed to close the specified file.
+}
+
+template <class T>
+void MappedArray<T>::clear() throw (int)
+{
+    if (munmap (array, mapped_size * sizeof(T)) == -1)
+        throw 1; // Failed to release the allocated array.
+
+    if (ftruncate (fd, 0) == -1)
+        throw 2; // Failed to truncate the file size.
+
+    if (lseek (fd, INITIAL_MAPPED_SIZE * sizeof(T), SEEK_SET) < 0)
+        throw 3; // Failed to expand the file size.
+
+    T c;
+    if (read (fd, &c, sizeof(T)) == -1)
+        c = 0;
+
+    if (write (fd, &c, sizeof(T)) == -1)
+        throw 4; // Failed to write a new value.
+
+    mapped_size = INITIAL_MAPPED_SIZE;
+    size = 0;
+
+    array = (T *) mmap(NULL, mapped_size * sizeof(T), PROT_READ | PROT_WRITE,
+                       MAP_SHARED, fd, 0);
+    if (array == MAP_FAILED)
+        throw 5; // Failed to map the specified file to an array.
+}
+
+template <class T>
+void MappedArray<T>::resize(size_t new_size) throw (int)
+{
+    if (mapped_size >= new_size)
+        return;
+
+    if (msync (array, mapped_size * sizeof(T), 0) == -1)
+        throw 1; // Failed to write the content of array to file.
+
+    if (munmap (array, mapped_size * sizeof(T)) == -1)
+        throw 2; // Failed to release the allocated array.
+
+    while (mapped_size < new_size)
+        mapped_size += RESIZE_SIZE;
+
+    if (lseek (fd, mapped_size * sizeof(T), SEEK_SET) < 0)
+        throw 3; // Failed to expand the file size.
+
+    T c;
+    if (read(fd, &c, sizeof(T)) == -1)
+        c = 0;
+
+    if (write(fd, &c, sizeof(T)) == -1)
+        throw 4; // Failed to write a new value.
+
+    array = (T *) mmap(NULL, mapped_size * sizeof(T), PROT_READ | PROT_WRITE,
+                       MAP_SHARED, fd, 0);
+    if (array == MAP_FAILED)
+        throw 5; // Failed to remap the specified file to an array.
+}
+
+template <class T>
+T &MappedArray<T>::operator[] (size_t i) throw (int)
+{
+    if (i >= size) {
+        if (mapped_size <= i) {
+            try {
+                resize(i+1);
+            } catch(int e) {
+                throw e;
+            }
+        }
+
+        for (int j=size; j<=i; j++)
+            array[j] = 0;
+
+        size = i + 1;
+    }
+
+    return array[i];
+}
+
 }
 
 #endif // _MADA_MAPPED_ARRAY_HPP_
