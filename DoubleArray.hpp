@@ -46,30 +46,39 @@
 
 namespace mada
 {
-template <class BaseArrayType, class CheckArrayType, class NCType> class DoubleArray
+template <class IndexType, class KeyType> class DoubleArray
 {
 private:
-    MappedArray<BaseArrayType> base;
-    MappedArray<CheckArrayType> check;
-    MappedArray<NCType> tail;
-    BaseArrayType pos;
+    MappedArray<IndexType> base;
+    MappedArray<IndexType> check;
+    MappedArray<KeyType> tail;
+    IndexType pos;
+    KeyType term; // 見出し語の終端文字
+
+    int key_len(const KeyType *key);
+    KeyType *fetch_str(IndexType p);
+    int str_cmp(const KeyType *str1, const KeyType *str2);
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
 		const char *tailfile,
-		BaseArrayType pos,
+		IndexType pos,
+		KeyType term,
 		int initialize);
     ~DoubleArray();
 
     void dump();
+    int find(const KeyType *a); // Check key "a" whether it is registered.
+    int insert(const KeyType *a); // Register key "a".
 };
 
-template <class BaseArrayType, class CheckArrayType, class NCType>
-DoubleArray<BaseArrayType, CheckArrayType, NCType>::DoubleArray(const char *basefile,
-								const char *checkfile,
-								const char *tailfile,
-								BaseArrayType pos,
-								int initialize) :
+template <class IndexType, class KeyType>
+DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
+								 const char *checkfile,
+								 const char *tailfile,
+								 IndexType pos,
+								 KeyType term,
+								 int initialize) :
     base(basefile),
     check(checkfile),
     tail(tailfile)
@@ -83,24 +92,29 @@ DoubleArray<BaseArrayType, CheckArrayType, NCType>::DoubleArray(const char *base
 	check[1] = 1;
 
 	tail[0] = 0; /* undefined */
-	pos = 1;
+	this->pos = 1;
     }
     else
     {
 	this->pos = pos;
     }
+
+    if (term <= 0)
+	throw 1; /* 終端記号の内部表現値も1以上でなければならない */
+
+    this->term = term;
 }
 
-template <class BaseArrayType, class CheckArrayType, class NCType>
-DoubleArray<BaseArrayType, CheckArrayType, NCType>::~DoubleArray()
+template <class IndexType, class KeyType>
+DoubleArray<IndexType, KeyType>::~DoubleArray()
 {
 
 }
 
 #define MIN(a,b) (a < b ? a : b)
 #define MAX(a,b) (a > b ? a : b)
-template <class BaseArrayType, class CheckArrayType, class NCType>
-void DoubleArray<BaseArrayType, CheckArrayType, NCType>::dump()
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::dump()
 {
     int i, j;
 
@@ -145,6 +159,203 @@ void DoubleArray<BaseArrayType, CheckArrayType, NCType>::dump()
 }
 #undef MIN
 #undef MAX
+
+/*
+ * このメソッドはダブル配列に指定された見出し語が存在するのかどうかを調べ
+ * ます。もし見出し語が存在するのであれば1を、そうでなければ0を返します。
+ * 引数:
+ *  a: 見出し語。ただし、文字列の末尾は終端記号 term で終わっていなければ
+ *     ならない。
+ *
+ * この関数で使用される変数と参考文献[2]の図2は以下のように対応している。
+ *  r => r
+ *  h => h
+ *  n => n - 1
+ *  a_1 => a[1]
+ *  a_h => a[h - 1]
+ *  S_TEMP => s_temp
+ *  FETCH_STR => fetch_str
+ *  STR_CMP => str_cmp
+ *  return(TRUE) => return 1;
+ *  return(FALSE) => return 0;
+ */
+template <class IndexType, class KeyType>
+int DoubleArray<IndexType, KeyType>::find(const KeyType *a)
+{
+    int r, h, t, n, p;
+    KeyType *s_temp;
+
+    r = 1;
+    h = 0;
+    n = key_len(a);
+
+    do
+    {
+	h += 1;
+	t = base[r] + a[h-1];
+
+	if (t > check[1] || check[t] != r)
+	    return 0;
+	else
+	    r = t;
+    } while (!(base[r] < 0));
+
+    if (h == n + 1)
+	return 1;
+    else
+	s_temp = fetch_str (-base[r]);
+
+    p = str_cmp (a + h, s_temp);
+    delete (s_temp);
+    if (p == -1)
+	return 1;
+    else
+	return 0;
+}
+
+template <class IndexType, class KeyType>
+int DoubleArray<IndexType, KeyType>::key_len(const KeyType *a)
+{
+    int i = 0;
+
+    while (a[i] != term)
+	i++;
+
+    return i;
+}
+
+/*
+ * 参考文献[2]の図2におけるFETCH_STRに対応する関数
+ *
+ * 返り値の文字列は呼び出し元によってメモリが開放されなければいけない。
+ */
+template <class IndexType, class KeyType>
+KeyType *DoubleArray<IndexType, KeyType>::fetch_str(IndexType p)
+{
+    int k;
+    KeyType *ret;
+
+    k = 0;
+    while (tail[p + k] != term)
+	k++;
+
+    ret = new KeyType [k+2];
+    for (int i=0; i<k+1; i++)
+	ret[i] = tail[p+i];
+    ret[k + 1] = 0;
+
+    return ret;
+}
+
+/*
+ * 参考文献[2]の図2におけるSTR_CMPに対応する関数
+ */
+template <class IndexType, class KeyType>
+int DoubleArray<IndexType, KeyType>::str_cmp(const KeyType *str1,
+					     const KeyType *str2)
+{
+    int i;
+
+    i = 0;
+    while (str1[i]  == str2[i])
+    {
+	if (str1[i] == term)
+	    return -1;
+
+	i++;
+    }
+
+    return i;
+}
+
+/*
+ * このメソッドはダブル配列に指定された見出し語を挿入します。
+ * 見出し語の挿入に成功すれば1を返し、すでに見出し語がダブル配列に存在して
+ * いた場合には0を返します。
+ * 引数:
+ *  a: 見出し語。ただし、文字列の末尾は終端記号 term で終わっていなければ
+ *     ならない。
+ *
+ * この関数で使用される変数と参考文献[2]の図2は以下のように対応している。
+ *  r => r
+ *  h => h
+ *  n => n - 1
+ *  a_1 => a[1]
+ *  a_h => a[h - 1]
+ *  S_TEMP => s_temp
+ *  FETCH_STR => double_array_fetch_str
+ *  STR_CMP => double_array_str_cmp
+ *  return(TRUE) => return 0;
+ *  return(FALSE) => return 1;
+ *
+ * ただし、参考文献[2]の「4.1 キーの追加」に記述されている変更を加えてある。
+ * また、C言語の慣習に合わせるため、返り値がdouble_array_find関数とは逆になっ
+ * ている。
+ *
+ * 参考文献[2]において、「4.1 キーの追加」の章の「(b) 行(1-3)のreturn(FALSE)
+ * の変更」におけるrは紛らわしい。B_INSERT関数の第1引数に用いられるrは図2の
+ * rと同一である。しかし、その他のrは図2におけるSTR_CMP関数の戻り値とすると
+ * 矛盾が無くなる。よって、その他のrは本メソッドでは変数pとしてある。
+ */
+template <class IndexType, class KeyType>
+int DoubleArray<IndexType, KeyType>::insert(const KeyType *a)
+{
+    int r, h, t, n, p;
+    KeyType *s_temp;
+
+    r = 1;
+    h = 0;
+    n = key_len(a);
+
+    do
+    {
+	h += 1;
+	t = base[r] + a[h-1];
+
+	if (t > check[1] || check[t] != r)
+	{
+	    KeyType *b = new KeyType [n + 2 - h];
+	    for (int i=0; i<n+2-h; i++)
+		b[i] = a[i + h - 1];
+
+//	    double_array_a_insert (r, b);
+	    delete b;
+
+	    return 1;
+	}
+	else
+	    r = t;
+    } while (!(base[r] < 0));
+
+    if (h == n + 1)
+	return 0;
+    else
+	s_temp = fetch_str (-base[r]);
+
+    p = str_cmp (a + h, s_temp);
+    if (p == -1)
+    {
+	delete s_temp;
+	return 0;
+    }
+    else
+    {
+	printf("Not implemented yet.\n");
+	return 0;
+/*
+	char *x;
+	x = (char *) malloc (sizeof(char) * (p + 1));
+	strncpy (x, a + h, p);
+	x[p] = 0;
+
+	double_array_b_insert (da, r, x, a + h + p, s_temp + p);
+
+	delete s_temp;
+	free (x);
+*/
+	return 1;
+    }
+}
 
 }
 

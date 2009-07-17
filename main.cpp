@@ -137,11 +137,48 @@ void testDoubleArray1()
 	}
     }
 
-    mada::DoubleArray<int, int, unsigned char> da("test1_base",
-						  "test1_check",
-						  "test1_tail",
-						  TEST1_TAIL_SIZE + 1,
-						  0);
+    mada::DoubleArray<int, unsigned char> da("test1_base",
+					     "test1_check",
+					     "test1_tail",
+					     TEST1_TAIL_SIZE + 1,
+					     testEncode('#'),
+					     0);
+    da.dump();
+
+    {
+	char str[6] = "aitu#";
+	unsigned char key[5];
+	for (int i=0; i<5; i++)
+	    key[i] = testEncode(str[i]);
+
+	if (da.find(key))
+	    printf("%s was found.\n", str);
+	else
+	    printf("%s was NOT found.\n", str);
+    }
+
+    {
+	char str[9] = "aituide#";
+	unsigned char key[8];
+	for (int i=0; i<8; i++)
+	    key[i] = testEncode(str[i]);
+
+	if (da.find(key))
+	    printf("%s was found.\n", str);
+	else
+	    printf("%s was NOT found.\n", str);
+    }
+}
+
+void testDoubleArray2()
+{
+    mada::DoubleArray<int, unsigned char> da("test2_base",
+					     "test2_check",
+					     "test2_tail",
+					     1,
+					     '#',
+					     1);
+
     da.dump();
 }
 
@@ -150,4 +187,5 @@ int main(int argc, char* argv)
 //    testMappedArray();
 
     testDoubleArray1();
+    testDoubleArray2();
 }
