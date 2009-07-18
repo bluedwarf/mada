@@ -42,7 +42,10 @@
 #ifndef _MADA_DOUBLE_ARRAY_HPP_
 #define _MADA_DOUBLE_ARRAY_HPP_
 
+#include <vector>
 #include "MappedArray.hpp"
+
+using namespace std;
 
 namespace mada
 {
@@ -55,9 +58,14 @@ private:
     IndexType pos;
     KeyType term; // 見出し語の終端文字
 
-    int key_len(const KeyType *key);
+    int keylen(const KeyType *key);
     KeyType *fetch_str(IndexType p);
     int str_cmp(const KeyType *str1, const KeyType *str2);
+    void a_insert(IndexType r, const KeyType *b);
+    void ins_str(IndexType r, const KeyType *e, IndexType d_pos);
+    IndexType set_str(IndexType p, const KeyType *y, IndexType y_len);
+    void b_insert(IndexType r, const KeyType *b, const KeyType *c, const KeyType *d);
+    IndexType x_check(vector<KeyType> &c_list);
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
@@ -85,12 +93,15 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 {
     if (initialize)
     {
+	base.clear();
 	base[0] = 0; /* undefiend */
 	base[1] = 1;
 
+	check.clear();
 	check[0] = 0; /* undefined */
 	check[1] = 1;
 
+	tail.clear();
 	tail[0] = 0; /* undefined */
 	this->pos = 1;
     }
@@ -182,12 +193,12 @@ void DoubleArray<IndexType, KeyType>::dump()
 template <class IndexType, class KeyType>
 int DoubleArray<IndexType, KeyType>::find(const KeyType *a)
 {
-    int r, h, t, n, p;
+    IndexType r, h, t, n, p;
     KeyType *s_temp;
 
     r = 1;
     h = 0;
-    n = key_len(a);
+    n = keylen(a);
 
     do
     {
@@ -214,7 +225,7 @@ int DoubleArray<IndexType, KeyType>::find(const KeyType *a)
 }
 
 template <class IndexType, class KeyType>
-int DoubleArray<IndexType, KeyType>::key_len(const KeyType *a)
+int DoubleArray<IndexType, KeyType>::keylen(const KeyType *a)
 {
     int i = 0;
 
@@ -300,12 +311,12 @@ int DoubleArray<IndexType, KeyType>::str_cmp(const KeyType *str1,
 template <class IndexType, class KeyType>
 int DoubleArray<IndexType, KeyType>::insert(const KeyType *a)
 {
-    int r, h, t, n, p;
+    IndexType r, h, t, n, p;
     KeyType *s_temp;
 
     r = 1;
     h = 0;
-    n = key_len(a);
+    n = keylen(a);
 
     do
     {
@@ -318,7 +329,7 @@ int DoubleArray<IndexType, KeyType>::insert(const KeyType *a)
 	    for (int i=0; i<n+2-h; i++)
 		b[i] = a[i + h - 1];
 
-//	    double_array_a_insert (r, b);
+	    a_insert (r, b);
 	    delete b;
 
 	    return 1;
@@ -340,20 +351,144 @@ int DoubleArray<IndexType, KeyType>::insert(const KeyType *a)
     }
     else
     {
-	printf("Not implemented yet.\n");
-	return 0;
-/*
-	char *x;
-	x = (char *) malloc (sizeof(char) * (p + 1));
-	strncpy (x, a + h, p);
-	x[p] = 0;
+	KeyType *x = new KeyType [p+1];
+	for (int i=0; i<p; i++)
+	    x[i] = a[h+i];
+	x[p] = term;
 
-	double_array_b_insert (da, r, x, a + h + p, s_temp + p);
+	b_insert (r, x, a + h + p, s_temp + p);
 
 	delete s_temp;
-	free (x);
-*/
+	delete x;
+
 	return 1;
+    }
+}
+
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::a_insert(IndexType r, const KeyType *b)
+{
+    IndexType t;
+
+    t = base[r] + b[0];
+    if (check[t] != 0)
+    {
+	/* ToDo: */
+	printf("Not implemented yet 2.\n");
+    }
+
+    ins_str (r, b, pos);
+}
+
+/*
+ * 参考文献[2]におけるINS_STR関数に対応
+ */
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::ins_str(IndexType r, const KeyType *e, IndexType d_pos)
+{
+    IndexType t, e_len;
+    KeyType *e_with_record;
+
+    t = base[r] + e[0];
+    check[t] = r;
+    base[t] = -d_pos;
+    if (t > check[1])
+	check[1] = t;
+
+    e_len = keylen (e);
+    e_with_record = new KeyType [e_len + 1];
+    for (int i=0; i<e_len; i++)
+	e_with_record[i] = e[i+1];
+    e_with_record[e_len] = '$'; // record (dummy)
+
+    pos = set_str (d_pos, e_with_record, e_len + 1);
+
+    delete e_with_record;
+}
+
+template <class IndexType, class KeyType>
+IndexType DoubleArray<IndexType, KeyType>::set_str(IndexType p, const KeyType *y, IndexType y_len)
+{
+    IndexType i;
+
+    for (i=0; i<y_len; i++)
+	tail[p + i] = y[i];
+
+    return (p == pos ? pos + y_len : pos);
+}
+
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::b_insert(IndexType r,
+					       const KeyType *b,
+					       const KeyType *c,
+					       const KeyType *d)
+{
+    IndexType old_pos = -base[r];
+
+    for (int i=0; i<keylen(b); i++)
+    {
+	vector<KeyType> c_list;
+	c_list.push_back (b[i]);
+	base[r] = x_check (c_list);
+
+	if (base[r] + b[i] > check[1])
+	    check[1] = base[r] + b[i];
+
+	check[base[r] + b[i]] = r;
+	r = base[r] + b[i];
+    }
+
+    vector<KeyType> c2_list;
+    c2_list.push_back (c[0]);
+    c2_list.push_back (d[0]);
+    base[r] = x_check (c2_list);
+    if (r > check[1])
+	check[1] = r;
+    ins_str (r, d, old_pos);
+    ins_str (r, c, pos);
+}
+
+template <class IndexType, class KeyType>
+IndexType DoubleArray<IndexType, KeyType>::x_check(vector<KeyType> &c_list)
+{
+    int i;
+    IndexType q;
+    KeyType c;
+
+    q = 1;
+    while (1)
+    {
+	i = 0;
+	while (1)
+	{
+	    /*
+	     * 全てのcに対して CHECK[q + c] == 0 を満たすので、qを返す。
+	     */
+	    if (i == c_list.size())
+		return q;
+
+	    c = c_list[i];
+
+	    /*
+	     * CHECK配列の大きさを超えるインデックスの要素は0なので、
+	     */
+	    if (q + c > check[1])
+	    {
+		i++;
+		continue;
+	    }
+
+	    /*
+	     * 全てのcに対して CHECK[q + c] == 0 を満たさないので、もうひとつ大きなqを
+	     * 試す。
+	     */
+	    if (check[q + c] != 0)
+		break;
+
+	    i++;
+	}
+
+	q++;
     }
 }
 

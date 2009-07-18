@@ -172,20 +172,35 @@ void testDoubleArray1()
 
 void testDoubleArray2()
 {
-    mada::DoubleArray<int, unsigned char> da("test2_base",
-					     "test2_check",
-					     "test2_tail",
-					     1,
-					     '#',
-					     1);
+    mada::DoubleArray<int, char> da("test2_base",
+				    "test2_check",
+				    "test2_tail",
+				    1, '#', 1);
+
+    da.insert("ai#");
+    da.insert("aitu#");
+    da.insert("aituide#");
+    da.insert("aite#");
 
     da.dump();
+
+    assert (da.find("ai#"));
+    assert (da.find("aitu#"));
+    assert (da.find("aituide#"));
+    assert (da.find("aite#"));
+
+    assert (!da.find("ait#"));
+    assert (!da.find("zai#"));
+    assert (!da.find("aituidea#"));
+    assert (!da.find("a#"));
+    assert (!da.find("aita#"));
+    assert (!da.find("#"));
 }
 
 int main(int argc, char* argv)
 {
 //    testMappedArray();
 
-    testDoubleArray1();
+//    testDoubleArray1();
     testDoubleArray2();
 }
