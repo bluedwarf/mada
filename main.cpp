@@ -142,6 +142,7 @@ void testDoubleArray1()
 					     "test1_tail",
 					     TEST1_TAIL_SIZE + 1,
 					     testEncode('#'),
+					     29,
 					     0);
     da.dump();
 
@@ -175,7 +176,7 @@ void testDoubleArray2()
     mada::DoubleArray<int, char> da("test2_base",
 				    "test2_check",
 				    "test2_tail",
-				    1, '#', 1);
+				    1, '#', 127, 1);
 
     da.insert("ai#");
     da.insert("aitu#");
@@ -197,10 +198,66 @@ void testDoubleArray2()
     assert (!da.find("#"));
 }
 
+void testDoubleArray3()
+{
+    mada::DoubleArray<int, char> da("test3_base",
+				    "test3_check",
+				    "test3_tail",
+				    1, '#', 127, 1);
+    char word[256];
+    FILE *f;
+    int len;
+
+    // insertion
+    f = fopen ("basic_english_words", "r");
+    if (!f)
+    {
+	printf ("testDoubleArray3 can't open dictionary file.\n");
+	return;
+    }
+
+    while (fgets (word, 255, f))
+    {
+	len = strlen (word);
+	assert (len <= 255);
+
+	if (len >= 1)
+	{
+	    word[len-1] = '#'; /* replace '\n' with '#' */
+	    assert (da.insert (word));
+	    printf("%s was added. \n", word);
+	}
+    }
+    fclose (f);
+
+    // search
+    f = fopen ("basic_english_words", "r");
+    if (!f)
+    {
+	printf ("testDoubleArray3 can't open dictionary file.\n");
+	return;
+    }
+
+    while (fgets (word, 255, f))
+    {
+	len = strlen (word);
+	assert (len <= 255);
+
+	if (len >= 1)
+	{
+	    word[len-1] = '#'; /* replace '\n' with '#' */
+	    assert (da.find (word));
+	    printf("%s was found. \n", word);
+	}
+    }
+    fclose (f);
+}
+
 int main(int argc, char* argv)
 {
 //    testMappedArray();
 
 //    testDoubleArray1();
-    testDoubleArray2();
+//    testDoubleArray2();
+    testDoubleArray3();
 }

@@ -57,6 +57,7 @@ private:
     MappedArray<KeyType> tail;
     IndexType pos;
     KeyType term; // 見出し語の終端文字
+    KeyType max; // 文字の最大値 (これにより、KeyTypeには 1〜maxまでの値しか入っていないものとされる。)
 
     int keylen(const KeyType *key);
     KeyType *fetch_str(IndexType p);
@@ -66,12 +67,17 @@ private:
     IndexType set_str(IndexType p, const KeyType *y, IndexType y_len);
     void b_insert(IndexType r, const KeyType *b, const KeyType *c, const KeyType *d);
     IndexType x_check(vector<KeyType> &c_list);
+    vector<KeyType> set_list(IndexType r);
+    IndexType modify(IndexType current, IndexType r,
+		     KeyType a, vector<KeyType> c_list);
+
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
 		const char *tailfile,
 		IndexType pos,
 		KeyType term,
+		KeyType max,
 		int initialize);
     ~DoubleArray();
 
@@ -82,11 +88,12 @@ public:
 
 template <class IndexType, class KeyType>
 DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
-								 const char *checkfile,
-								 const char *tailfile,
-								 IndexType pos,
-								 KeyType term,
-								 int initialize) :
+					     const char *checkfile,
+					     const char *tailfile,
+					     IndexType pos,
+					     KeyType term,
+					     KeyType max,
+					     int initialize) :
     base(basefile),
     check(checkfile),
     tail(tailfile)
@@ -114,6 +121,7 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 	throw 1; /* 終端記号の内部表現値も1以上でなければならない */
 
     this->term = term;
+    this->max = max;
 }
 
 template <class IndexType, class KeyType>
@@ -373,8 +381,13 @@ void DoubleArray<IndexType, KeyType>::a_insert(IndexType r, const KeyType *b)
     t = base[r] + b[0];
     if (check[t] != 0)
     {
-	/* ToDo: */
-	printf("Not implemented yet 2.\n");
+	vector<KeyType> list1 = set_list (r);
+	vector<KeyType> list2 = set_list (check[t]);
+
+//	if (list1.size() + 1 < list2.size())
+	    modify (r, r, b[0], list1);
+//	else
+//	    modify (r, check[t], 0, list2);
     }
 
     ins_str (r, b, pos);
@@ -490,6 +503,83 @@ IndexType DoubleArray<IndexType, KeyType>::x_check(vector<KeyType> &c_list)
 
 	q++;
     }
+}
+
+template <class IndexType, class KeyType>
+vector<KeyType> DoubleArray<IndexType, KeyType>::set_list(IndexType r)
+{
+    IndexType t;
+    KeyType a;
+    vector<KeyType> ret;
+
+    if (r <= 0)
+	return ret;
+
+    for (a=1; a<=max; a++)
+    {
+	t = base[r] + a;
+	if (t >= 2 && check[t] == r)
+	    ret.push_back (a);
+
+	if (a == max)
+	    break;
+    }
+
+    return ret;
+}
+
+template <class IndexType, class KeyType>
+IndexType DoubleArray<IndexType, KeyType>::modify(IndexType current,
+						  IndexType r,
+						  KeyType a,
+						  vector<KeyType> c_list)
+{
+    IndexType old_base = base[r];
+
+    vector<KeyType> tmp_list;
+    int found = 0;
+    for (int i=0; i<c_list.size(); i++)
+    {
+	if (c_list[i] == a)
+	    found = 1;
+
+	tmp_list.push_back (c_list[i]);
+    }
+    if (!found && a != 0)
+	tmp_list.push_back (a);
+
+    base[r] = x_check (tmp_list);
+
+    KeyType c;
+    IndexType t, t_dash;
+
+    for (int i=0; i<c_list.size(); i++)
+    {
+	c = c_list[i];
+
+	t = old_base + c;
+	t_dash = base[r] + c;
+	check[t_dash] = r;
+	base[t_dash] = base[t];
+
+	if (base[t] > 0)
+	{
+	    int q;
+	    for (q=2; q<=check[1]; q++)
+	    {
+		if (check[q] == t)
+		    check[q] = t_dash;
+	    }
+
+	    if (t == current)
+		current = t_dash;
+	}
+
+	base[t] = 0;
+	check[t] = 0;
+    }
+
+    return current;
 }
 
 }
