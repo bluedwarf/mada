@@ -225,7 +225,7 @@ void testDoubleArray3()
 	{
 	    word[len-1] = '#'; /* replace '\n' with '#' */
 	    assert (da.insert (word));
-	    printf("%s was added. \n", word);
+	    //	    printf("%s was added. \n", word);
 	}
     }
     fclose (f);
@@ -247,7 +247,40 @@ void testDoubleArray3()
 	{
 	    word[len-1] = '#'; /* replace '\n' with '#' */
 	    assert (da.find (word));
-	    printf("%s was found. \n", word);
+	    //	    printf("%s was found. \n", word);
+	}
+
+	assert (!da.find ("b#"));
+	assert (!da.find ("dober#"));
+    }
+    fclose (f);
+
+    // remove and research
+    assert (da.remove("narrow#"));
+    assert (da.remove("a#"));
+    assert (!da.remove("b#"));
+    assert (!da.remove("dober#"));
+
+    f = fopen ("basic_english_words", "r");
+    if (!f)
+    {
+	printf ("testDoubleArray3 can't open dictionary file.\n");
+	return;
+    }
+
+    while (fgets (word, 255, f))
+    {
+	len = strlen (word);
+	assert (len <= 255);
+
+	if (len >= 1)
+	{
+	    word[len-1] = '#'; /* replace '\n' with '#' */
+	    if (strcmp(word, "narrow#") == 0 ||
+		strcmp(word, "a#") == 0)
+		assert (!da.find (word));
+	    else
+		assert (da.find (word));
 	}
     }
     fclose (f);

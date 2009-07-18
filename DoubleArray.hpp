@@ -84,6 +84,7 @@ public:
     void dump();
     int find(const KeyType *a); // Check key "a" whether it is registered.
     int insert(const KeyType *a); // Register key "a".
+    int remove(const KeyType *a); // Remove key "a".
 };
 
 template <class IndexType, class KeyType>
@@ -587,6 +588,48 @@ IndexType DoubleArray<IndexType, KeyType>::modify(IndexType current,
     }
 
     return current;
+}
+
+template <class IndexType, class KeyType>
+int DoubleArray<IndexType, KeyType>::remove(const KeyType *a)
+{
+    IndexType r, h, t, n, p;
+    KeyType *s_temp;
+
+    r = 1;
+    h = 0;
+    n = keylen(a);
+
+    do
+    {
+	h += 1;
+	t = base[r] + a[h-1];
+
+	if (t > check[1] || check[t] != r)
+	    return 0;
+	else
+	    r = t;
+    } while (!(base[r] < 0));
+
+    if (h == n + 1)
+    {
+	base[r] = 0;
+	check[r] = 0;
+	return 1;
+    }
+    else
+	s_temp = fetch_str (-base[r]);
+
+    p = str_cmp (a + h, s_temp);
+    delete (s_temp);
+    if (p == -1)
+    {
+	base[r] = 0;
+	check[r] = 0;
+	return 1;
+    }
+    else
+	return 0;
 }
 
 }
