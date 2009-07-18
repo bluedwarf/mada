@@ -384,10 +384,10 @@ void DoubleArray<IndexType, KeyType>::a_insert(IndexType r, const KeyType *b)
 	vector<KeyType> list1 = set_list (r);
 	vector<KeyType> list2 = set_list (check[t]);
 
-//	if (list1.size() + 1 < list2.size())
+	if (list1.size() + 1 < list2.size())
 	    modify (r, r, b[0], list1);
-//	else
-//	    modify (r, check[t], 0, list2);
+	else
+	    modify (r, check[t], 0, list2);
     }
 
     ins_str (r, b, pos);
@@ -536,19 +536,24 @@ IndexType DoubleArray<IndexType, KeyType>::modify(IndexType current,
 {
     IndexType old_base = base[r];
 
-    vector<KeyType> tmp_list;
-    int found = 0;
-    for (int i=0; i<c_list.size(); i++)
+    if (a == 0)
+	base[r] = x_check (c_list);
+    else
     {
-	if (c_list[i] == a)
-	    found = 1;
+	vector<KeyType> tmp_list;
+	int found = 0;
+	for (int i=0; i<c_list.size(); i++)
+	{
+	    if (c_list[i] == a)
+		found = 1;
 
-	tmp_list.push_back (c_list[i]);
+	    tmp_list.push_back (c_list[i]);
+	}
+	if (!found)
+	    tmp_list.push_back (a);
+
+	base[r] = x_check (tmp_list);
     }
-    if (!found && a != 0)
-	tmp_list.push_back (a);
-
-    base[r] = x_check (tmp_list);
 
     KeyType c;
     IndexType t, t_dash;
@@ -559,13 +564,15 @@ IndexType DoubleArray<IndexType, KeyType>::modify(IndexType current,
 
 	t = old_base + c;
 	t_dash = base[r] + c;
+
+	if (t_dash > check[1])
+	    check[1] = t_dash;
 	check[t_dash] = r;
 	base[t_dash] = base[t];
 
 	if (base[t] > 0)
 	{
-	    int q;
-	    for (q=2; q<=check[1]; q++)
+	    for (int q=2; q<=check[1]; q++)
 	    {
 		if (check[q] == t)
 		    check[q] = t_dash;
