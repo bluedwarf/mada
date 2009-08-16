@@ -25,272 +25,89 @@
 #include "MappedArray.hpp"
 #include "DoubleArray.hpp"
 
-#define MAPPED_ARRAY_TESTFILE "abc"
-void testMappedArray()
+void printConsoleHelp()
 {
-    FILE *f;
-
-    // Note that the test file "abc" will be removed.
-    remove(MAPPED_ARRAY_TESTFILE);
-
-    f = fopen(MAPPED_ARRAY_TESTFILE, "r");
-    if (f) {
-        fclose(f);
-        assert(f != NULL); // Failed to remove the test file.
-    }
-
-    {
-        // Test of new array.
-        mada::MappedArray<int> array(MAPPED_ARRAY_TESTFILE);
-
-        assert(array[0] == 0);
-        array[0] = 1;
-        assert(array[0] == 1);
-
-        assert(array[INITIAL_MAPPED_SIZE + 10] == 0);
-        array[INITIAL_MAPPED_SIZE + 10] = 10;
-        assert(array[INITIAL_MAPPED_SIZE + 10] == 10);
-    }
-
-    {
-        // Test of existing array.
-        mada::MappedArray<int> array(MAPPED_ARRAY_TESTFILE);
-
-        assert(array[0] == 1);
-        assert(array[INITIAL_MAPPED_SIZE + 10] == 10);
-    }
-
-    assert(remove(MAPPED_ARRAY_TESTFILE) == 0);
-
-    printf("Unit test of mapped array was successfully finished.\n");
+    printf ("===== COMMAND LIST =====\n\n");
+    printf (" exit: Exit from this console.\n");
+    printf (" quit: Exit from this console.\n");
+    printf (" add words: Add a word to this double array.\n");
+    printf (" delete words: Delete a word from this double array.\n");
+    printf (" search words: Search a word in this double array.\n");
+    printf (" load file: Add words in file.\n\n");
 }
 
-/*
-  本テストでは入力記号の有限集合Iをアルファベットの小文字(a-z)とし、これらの
-  内部表現値は参考文献[1]の表6.1を用いる。ASCIIコードと内部表現値は以下の関
-  数で相互に変換する。末尾記号は"#"である。
-    - testEncode関数: ASCIIコードを内部表現値に変換
-*/
-unsigned char testEncode(char ch)
+void launchConsole()
 {
-    if (ch >= 'a' && ch <= 'z')
-	return (ch - 'a' + 1);
-    else if (ch == '#')
-	return 27;
-    else if (ch == 0)
-	return 0;
-    else if (ch == '$')
-	return 28;
-    else if (ch == '?')
-	return 29;
-    else
-    {
-	fprintf (stderr, "This implementation of Double-Array doesn't support the character %x.\n", ch);
-	exit (EXIT_FAILURE);
-    }
-}
+    char command[256];
+    char key[256];
+    char term = '#';
 
-char testDecode(unsigned char nm)
-{
-    if (nm >= 1 && nm <= 26)
-	return (nm + 'a' - 1);
-    else if (nm == 27)
-	return '#';
-    else if (nm == 0)
-	return '\0';
-    else if (nm == 28)
-	return '$';
-    else if (nm == 29)
-	return '?';
-    else
-    {
-	fprintf (stderr, "This implementation of Double-Array doesn't support the numerical number %x.\n", nm);
-	exit (EXIT_FAILURE);
-    }
-}
+    // initialize double array
+    mada::DoubleArray<int, char> da("base",
+				    "check",
+				    "tail",
+				    1, term, 127, 1);
 
-/*
- * 参考文献[1]の図6.12にある見出し集合Kのダブル配列
- * K = {ai#, aitu#, aituide#, aite#}
- */
-static int test1_base[30] = {0, 1, 1, 0, 0, 0, -11, 0, 0, 0, 1, -7, 0, 0, 0, 0,
-			 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, -1, -4};
-static int test1_check[30] = {0, 29, 1, 0, 0, 0, 21, 0, 0, 0, 2, 22, 0, 0, 0,
-			    0, 0, 0, 0, 0, 0, 10, 21, 0, 0, 0, 0, 0, 10, 22};
-static char test1_tail[13] = {0, '$', '?', '?', '$', '?', '?', 'd', 'e', '#',
-			  '$', '#', '$'};
-#define TEST1_BASE_SIZE (29)
-#define TEST1_TAIL_SIZE (12)
-void testDoubleArray1()
-{
-    {
-	mada::MappedArray<int> base("test1_base");
-	mada::MappedArray<int> check("test1_check");
-	mada::MappedArray<unsigned char> tail("test1_tail");
+    while (1) {
+	printf("> ");
+	fgets(command, 256, stdin);
 
-	for (int i = 0; i <= TEST1_BASE_SIZE; i++)
-	{
-	    base[i] = test1_base[i];
-	    check[i] = test1_check[i];
-	    if (i <= TEST1_TAIL_SIZE)
-		tail[i] = testEncode(test1_tail[i]);
-	}
-    }
+	if (strncmp (command, "quit\n", 5) == 0 ||
+	    strncmp (command, "exit\n", 5) == 0) {
+	    printf ("QUIT\n");
+	    break;
+	} else if (strncmp (command, "add ", 4) == 0 && 
+		   command[4] != '\0') {
+	    strcpy (key, command + 4);
 
-    mada::DoubleArray<int, unsigned char> da("test1_base",
-					     "test1_check",
-					     "test1_tail",
-					     TEST1_TAIL_SIZE + 1,
-					     testEncode('#'),
-					     29,
-					     0);
-    da.dump();
+	    int len = strlen (key);
+	    key[len-1] = term; // replace '\n' with the terminal symbol.
 
-    {
-	char str[6] = "aitu#";
-	unsigned char key[5];
-	for (int i=0; i<5; i++)
-	    key[i] = testEncode(str[i]);
-
-	if (da.find(key))
-	    printf("%s was found.\n", str);
-	else
-	    printf("%s was NOT found.\n", str);
-    }
-
-    {
-	char str[9] = "aituide#";
-	unsigned char key[8];
-	for (int i=0; i<8; i++)
-	    key[i] = testEncode(str[i]);
-
-	if (da.find(key))
-	    printf("%s was found.\n", str);
-	else
-	    printf("%s was NOT found.\n", str);
-    }
-}
-
-void testDoubleArray2()
-{
-    mada::DoubleArray<int, char> da("test2_base",
-				    "test2_check",
-				    "test2_tail",
-				    1, '#', 127, 1);
-
-    da.insert("ai#");
-    da.insert("aitu#");
-    da.insert("aituide#");
-    da.insert("aite#");
-
-    da.dump();
-
-    assert (da.find("ai#"));
-    assert (da.find("aitu#"));
-    assert (da.find("aituide#"));
-    assert (da.find("aite#"));
-
-    assert (!da.find("ait#"));
-    assert (!da.find("zai#"));
-    assert (!da.find("aituidea#"));
-    assert (!da.find("a#"));
-    assert (!da.find("aita#"));
-    assert (!da.find("#"));
-}
-
-void testDoubleArray3()
-{
-    mada::DoubleArray<int, char> da("test3_base",
-				    "test3_check",
-				    "test3_tail",
-				    1, '#', 127, 1);
-    char word[256];
-    FILE *f;
-    int len;
-
-    // insertion
-    f = fopen ("basic_english_words", "r");
-    if (!f)
-    {
-	printf ("testDoubleArray3 can't open dictionary file.\n");
-	return;
-    }
-
-    while (fgets (word, 255, f))
-    {
-	len = strlen (word);
-	assert (len <= 255);
-
-	if (len >= 1)
-	{
-	    word[len-1] = '#'; /* replace '\n' with '#' */
-	    assert (da.insert (word));
-	    //	    printf("%s was added. \n", word);
-	}
-    }
-    fclose (f);
-
-    // search
-    f = fopen ("basic_english_words", "r");
-    if (!f)
-    {
-	printf ("testDoubleArray3 can't open dictionary file.\n");
-	return;
-    }
-
-    while (fgets (word, 255, f))
-    {
-	len = strlen (word);
-	assert (len <= 255);
-
-	if (len >= 1)
-	{
-	    word[len-1] = '#'; /* replace '\n' with '#' */
-	    assert (da.find (word));
-	    //	    printf("%s was found. \n", word);
-	}
-
-	assert (!da.find ("b#"));
-	assert (!da.find ("dober#"));
-    }
-    fclose (f);
-
-    // remove and research
-    assert (da.remove("narrow#"));
-    assert (da.remove("a#"));
-    assert (!da.remove("b#"));
-    assert (!da.remove("dober#"));
-
-    f = fopen ("basic_english_words", "r");
-    if (!f)
-    {
-	printf ("testDoubleArray3 can't open dictionary file.\n");
-	return;
-    }
-
-    while (fgets (word, 255, f))
-    {
-	len = strlen (word);
-	assert (len <= 255);
-
-	if (len >= 1)
-	{
-	    word[len-1] = '#'; /* replace '\n' with '#' */
-	    if (strcmp(word, "narrow#") == 0 ||
-		strcmp(word, "a#") == 0)
-		assert (!da.find (word));
+	    if (da.insert (key))
+		printf("ADDED \"%s\".\n", key);
 	    else
-		assert (da.find (word));
+		printf("Failed to add \"%s\".\n", key);
+	} else if (strncmp (command, "delete ", 7) == 0 &&
+		   command[7] != '\0') {
+	    strcpy (key, command + 7);
+
+	    int len = strlen (key);
+	    key[len-1] = term; // replace '\n' with the terminal symbol.
+
+	    if (da.remove (key))
+		printf("DELETED \"%s\".\n", key);
+	    else
+		printf("Failed to delete \"%s\".\n", key);
+	} else if (strncmp (command, "search ", 7) == 0 &&
+		   command[7] != '\0') {
+ 	    strcpy (key, command + 7);
+
+	    int len = strlen (key);
+	    key[len-1] = term; // replace '\n' with the terminal symbol.
+
+	    if (da.find (key))
+		printf("FOUND \"%s\".\n", key);
+	    else
+		printf("Failed to find \"%s\".\n", key);
+	} else if (strncmp (command, "load ", 5) == 0 &&
+		   command[5] != '\0') {
+	    strcpy (key, command + 5);
+
+	    int len = strlen (key);
+	    key[len-1] = '\0'; // replace '\n' with '\0'
+
+	    int count = da.loadWordList (key);
+	    if (count == -1)
+		printf ("Failed to open %s\n", key);
+	    else
+		printf ("Added %d keys\n", count);
+	} else {
+	    printConsoleHelp ();
 	}
     }
-    fclose (f);
 }
 
 int main(int argc, char* argv)
 {
-//    testMappedArray();
-
-//    testDoubleArray1();
-//    testDoubleArray2();
-    testDoubleArray3();
+    launchConsole();
 }

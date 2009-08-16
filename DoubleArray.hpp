@@ -20,23 +20,24 @@
  */
 
 /*
-  ダブル配列(Double Array)の実装
-
-  ダブル配列をC++で実装したものである。
-
-== 配列のインデックスについて ==
-
-  参考文献[1]、[2]では配列や文字列のインデックスが1ではじまる。C言語では一般に配列の
-  インデックスが0からはじめるのが基本だが、本実装ではBASE配列、CEHCK配列、TAIL配列と
-  もにインデックスが1からはじまるようにしてある。このため、これらの配列の0番目の要素
-  の値は不定である。しかし、文字列処理はできるだけC言語の慣習に従うためにインデックス
-  を0からはじまるようにしてあるため、参考文献[1]、[2]と一部のインデックスが異なる。
-
-[参考文献]
-  [1] 吉村賢治，「自然言語処理の基礎」，サイエンス社，2000，pp.174-177．
-      (ISBN 4-7819-0956-6)
-  [2] 青江順一，ダブル配列による高速ディジタル検索アルゴリズム，電子情報
-      通信学会論文誌，J71-D，9，pp.1592-1600，1987．
+ * Double Array with C++.
+ *
+ * == About indices of array ==
+ * In the references [1] and [2], every first index of array and string
+ * is "1" instead of "0". Therefore, in this implementation, BASE, CHECK and
+ * TAIL arrays start with index "1" while index of array usually starts with
+ * 0 in C++. Thus, the 0th elements of these arrays are undefined.
+ *
+ * On the other hand, string processing and other array manipulation in
+ * this program follows normal C/C++ convention, where index of array
+ * starts with "0". Be careful, some indices in this implementation are
+ * different from counterparts of reference [1] or [2].
+ *
+ * == Reference ==
+ * [1] 吉村賢治，「自然言語処理の基礎」，サイエンス社，2000，pp.174-177．
+ *     (ISBN 4-7819-0956-6)
+ * [2] 青江順一，ダブル配列による高速ディジタル検索アルゴリズム，電子情報
+ *     通信学会論文誌，J71-D，9，pp.1592-1600，1987．
  */
 
 #ifndef _MADA_DOUBLE_ARRAY_HPP_
@@ -56,8 +57,8 @@ private:
     MappedArray<IndexType> check;
     MappedArray<KeyType> tail;
     IndexType pos;
-    KeyType term; // 見出し語の終端文字
-    KeyType max; // 文字の最大値 (これにより、KeyTypeには 1〜maxまでの値しか入っていないものとされる。)
+    KeyType term; // terminal symbol
+    KeyType max; // the maximal value of KeyType
 
     int keylen(const KeyType *key);
     KeyType *fetch_str(IndexType p);
@@ -85,6 +86,8 @@ public:
     int find(const KeyType *a); // Check key "a" whether it is registered.
     int insert(const KeyType *a); // Register key "a".
     int remove(const KeyType *a); // Remove key "a".
+
+    int loadWordList(const char *file);
 };
 
 template <class IndexType, class KeyType>
@@ -119,7 +122,7 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
     }
 
     if (term <= 0)
-	throw 1; /* 終端記号の内部表現値も1以上でなければならない */
+	throw 1; /* terminal symbol must be greater than 0. */
 
     this->term = term;
     this->max = max;
@@ -630,6 +633,40 @@ int DoubleArray<IndexType, KeyType>::remove(const KeyType *a)
     }
     else
 	return 0;
+}
+
+/*
+ * Read keys from text file and add those keys to this double array.
+ *
+ * == RETURN ==
+ *  -1: Failed to open the specified file.
+ *  0:  The number of newly added keys.
+ */
+template <class IndexType, class KeyType>
+int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
+{
+    int len;
+    int count = 0;
+    char word[256];
+    FILE *f;
+
+    f = fopen (file, "r");
+    if (!f)
+	return -1;
+
+    while (fgets (word, 255, f))
+    {
+	len = strlen (word);
+
+	if (len >= 1)
+	{
+	    word[len-1] = term; /* replace '\n' with terminal symbol */
+	    count += insert (word);
+	}
+    }
+    fclose (f);
+
+    return count;
 }
 
 }
