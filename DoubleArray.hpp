@@ -36,6 +36,8 @@
 #include <list>
 #include "MappedArray.hpp"
 
+#define DA_SIZE (check[0])
+
 using namespace std;
 
 namespace mada
@@ -50,10 +52,9 @@ private:
     KeyType term; // terminal symbol
     KeyType max; // the maximal value of KeyType
 
-    IndexType da_size;
     IndexType e_head;
 
-    int initialized;
+    int ready;
 
     int keylen(const KeyType *key);
     void W_Base(IndexType index, IndexType val);
@@ -85,6 +86,7 @@ public:
 
     int loadWordList(const char *file);
     void dump();
+    void printInfo();
 };
 
 template <class IndexType, class KeyType>
@@ -106,17 +108,18 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 	base[1] = 1;
 
 	check.clear();
-	check[0] = 0; /* undefined */
+	check[0] = 1; /* used for da_size */
 	check[1] = 0;
-	da_size = 1;
 
 	tail.clear();
 	tail[0] = 0; /* undefined */
 	this->tail_pos = 1;
+	this->ready = 0;
     }
     else
     {
 	this->tail_pos = pos;
+	this->ready = 1;
     }
 
     if (term <= 0)
@@ -125,7 +128,6 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
     this->term = term;
     this->max = max;
     this->e_head = 0;
-    this->initialized = 0;
 }
 
 template <class IndexType, class KeyType>
@@ -151,13 +153,13 @@ void DoubleArray<IndexType, KeyType>::W_Base(IndexType index, IndexType val)
     if (e_head == 0) {
 	base[index] = val;
 
-	if (index > da_size)
-	    da_size = index;
+	if (index > DA_SIZE)
+	    DA_SIZE = index;
     } else {
 	// update unused element list
-	if (index > da_size) { // (W-1)
+	if (index > DA_SIZE) { // (W-1)
 	    base[index] = val;
-	    da_size = index;
+	    DA_SIZE = index;
 	} else {
 	    base[index] = val;
 	}
@@ -172,15 +174,15 @@ void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
 	// unused element list is not in use.
 	check[index] = val;
 
-	if (index > da_size)
-	    da_size = index;
+	if (index > DA_SIZE)
+	    DA_SIZE = index;
     } else {
 	// ToDo: implement (W-1) - (W-4b)
 
 	// update unused element list
-	if (index > da_size) { // (W-1)
+	if (index > DA_SIZE) { // (W-1)
 	    check[index] = val;
-	    da_size = val;
+	    DA_SIZE = val;
 	} else {
 	    check[index] = val;
 	}
@@ -235,7 +237,7 @@ IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
 	    }
 
 	    e_index = -check[e_index];
-	} while (e_index <= da_size); // (XX-3)
+	} while (e_index <= DA_SIZE); // (XX-3)
 
 //	printf ("q (2) = %d, e_index = %d\n", e_index-c1, e_index);
 	if (e_index - c1 < 1)
@@ -269,7 +271,7 @@ IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
 	    }
 
 	    q++;
-	} while (q <= da_size);
+	} while (q <= DA_SIZE);
 
 	// (X-3)
 //	printf ("q (4) = %d\n", q);
@@ -283,7 +285,7 @@ int DoubleArray<IndexType, KeyType>::Forward(IndexType s, KeyType a)
     IndexType t;
 
     t = base[s] + a;
-    if (0 < t && t < da_size+1 && check[t] == s)
+    if (0 < t && t < DA_SIZE+1 && check[t] == s)
 	return t;
     else
 	return 0;
@@ -301,7 +303,7 @@ list<KeyType> DoubleArray<IndexType, KeyType>::GetLabel(IndexType index)
     for (KeyType a=1; a<=max; a++)
     {
 	t = base[index] + a;
-	if (0 < t && t < da_size+1 && check[t] == index)
+	if (0 < t && t < DA_SIZE+1 && check[t] == index)
 	    ret.push_back (a);
 
 	// For signed value.
@@ -338,7 +340,7 @@ void DoubleArray<IndexType, KeyType>::Modify(IndexType index, list<KeyType> &R, 
 
 	if (base[old_t] > 0) {
 	    // (M-3)
-	    for (IndexType q=1; q<=da_size; q++)
+	    for (IndexType q=1; q<=DA_SIZE; q++)
 		if (check[q] == old_t)
 		    W_Check (q, t);
 	}
@@ -397,7 +399,7 @@ void DoubleArray<IndexType, KeyType>::ConstructUnusedList()
     int count;
     vector<IndexType> r;
 
-    for (IndexType index=1; index<=da_size; index++) {
+    for (IndexType index=1; index<=DA_SIZE; index++) {
 	if (check[index] <= 0 && base[index] == 0)
 	    r.push_back (index);
     }
@@ -408,7 +410,7 @@ void DoubleArray<IndexType, KeyType>::ConstructUnusedList()
     e_head = r[0];
     for (IndexType i=0; i<=r.size()-2; i++)
 	check[r[i]] = -r[i+1];
-    check[r[r.size()-1]] = -(da_size + 1);
+    check[r[r.size()-1]] = -(DA_SIZE + 1);
 }
 
 template <class IndexType, class KeyType>
@@ -447,8 +449,8 @@ void DoubleArray<IndexType, KeyType>::StaticInsert(IndexType s, int depth, int s
     for (int i=0; i<cs.size(); i++) {
 	IndexType t = base[s] + cs[i];
 	check[t] = s;
-	if (t > da_size)
-	    da_size = t;
+	if (t > DA_SIZE)
+	    DA_SIZE = t;
     }
 
     int n_start = start;
@@ -482,7 +484,7 @@ void DoubleArray<IndexType, KeyType>::StaticInsert(IndexType s, int depth, int s
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::Search(const KeyType *a)
 {
-    if (!initialized)
+    if (!ready)
 	return 0;
 
     // (D-1)
@@ -529,7 +531,7 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 //	    if (e_head == 0)
 //		ConstructUnusedList ();
 
-	    initialized = 1;
+	    ready = 1;
 	    return 1;
 	} else {
 	    index = t;
@@ -552,7 +554,7 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::Remove(const KeyType *a)
 {
-    if (!initialized)
+    if (!ready)
 	return 0;
 
     // (D-1)
@@ -601,27 +603,33 @@ int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
 	if (len >= 1)
 	{
 	    word[len-1] = term; /* replace '\n' with terminal symbol */
-	    if (initialized) {
+//	    if (ready) {
 		// dynamic insertion
 		count += Add (word);
+/*
 	    } else {
+	    // ToDo: not to read every words in memory...
+	    //       it takes very very long time if the number of keys
+	    //       is more than 1000.
 		// static insertion
 		static_keys.push_back (word);
 	    }
+*/
 	}
     }
     fclose (f);
 
-    if (!initialized) {
-	// Todo: sort static_keys
+/*
+    if (!ready) {
+	// Todo: sort static_keys and delete duplicated keys.
 
 	// static insertion
 	StaticInsert (1, 0, 0, static_keys.size()-1);
 
 	static_keys.clear();
-	initialized = 1;
+	ready = 1;
     }
-
+*/
     return count;
 }
 
@@ -632,23 +640,23 @@ void DoubleArray<IndexType, KeyType>::dump()
 {
     int i, j;
 
-    for (i = 1; i <= da_size; i += 15)
+    for (i = 1; i <= DA_SIZE; i += 15)
     {
 	/* print indices */
 	printf ("       ");
-	for (j = i; j <= MIN(i+14, da_size); j++)
+	for (j = i; j <= MIN(i+14, DA_SIZE); j++)
 	    printf ("%4d", j);
 	printf ("\n");
 
 	/* print the BASE array */
 	printf ("  BASE ");
-	for (j = i; j <= MIN(i+14, da_size); j++)
+	for (j = i; j <= MIN(i+14, DA_SIZE); j++)
 	    printf ("%4d", base[j]);
 	printf ("\n");
 
 	/* print the CHECK array */
 	printf (" CEHCK ");
-	for (j = i; j <= MIN(i+14, da_size); j++)
+	for (j = i; j <= MIN(i+14, DA_SIZE); j++)
 	    printf ("%4d", check[j]);
 	printf ("\n");
 
@@ -657,6 +665,14 @@ void DoubleArray<IndexType, KeyType>::dump()
 }
 #undef MIN
 #undef MAX
+
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::printInfo()
+{
+    printf ("Size of index: %d bytes\n", sizeof(IndexType));
+    printf ("Size of array: %d (%d bytes)\n",
+	    DA_SIZE, DA_SIZE*sizeof(IndexType)*2);
+}
 
 }
 

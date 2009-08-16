@@ -35,10 +35,11 @@ void printConsoleHelp()
     printf (" search words: Search a word in this double array.\n");
     printf (" load file: Add words in file.\n");
     printf (" search_file file: Search all words in file.\n");
-    printf (" dump: Dump double array.\n\n");
+    printf (" dump: Dump double array.\n");
+    printf (" info: Show the information of current double array.\n\n");
 }
 
-void launchConsole()
+void launchConsole(int init)
 {
     char command[256];
     char key[256];
@@ -48,7 +49,7 @@ void launchConsole()
     mada::DoubleArray<int, char> da("base",
 				    "check",
 				    "tail",
-				    1, term, 127, 1);
+				    1, term, 127, init);
 
     while (1) {
 	printf("> ");
@@ -65,12 +66,15 @@ void launchConsole()
 	    int len = strlen (key);
 	    key[len-1] = term; // replace '\n' with the terminal symbol.
 
-	    if (da.Add (key))
-		printf("ADDED \"%s\".\n", key);
-	    else
-		printf("Failed to add \"%s\".\n", key);
+	    clock_t start = clock();
+	    int res = da.Add (key);
+	    clock_t end = clock();
 
-	    da.dump();
+	    if (res) {
+		printf("ADDED \"%s\".\n", key);
+		printf ("%f msec\n", (float)(end-start)/(float)CLOCKS_PER_SEC*1000.0);
+	    } else
+		printf("Failed to add \"%s\".\n", key);
 	} else if (strncmp (command, "remove ", 7) == 0 &&
 		   command[7] != '\0') {
 	    strcpy (key, command + 7);
@@ -108,7 +112,7 @@ void launchConsole()
 		printf ("Failed to open %s\n", key);
 	    else {
 		printf ("Added %d keys\n", count);
-		printf ("%f msec\n", (float)(end-start)/(float)CLOCKS_PER_SEC);
+		printf ("%f sec\n", (float)(end-start)/(float)CLOCKS_PER_SEC);
 	    }
 	} else if (strncmp (command, "search_file ", 12) == 0 &&
 		   command[12] != '\0') {
@@ -137,13 +141,19 @@ void launchConsole()
 	    fclose (f);
 	} else if (strncmp (command, "dump\n", 5) == 0) {
 	    da.dump();
+	} else if (strncmp (command, "info\n", 5) == 0) {
+	    da.printInfo();
 	} else {
 	    printConsoleHelp ();
 	}
     }
 }
 
-int main(int argc, char* argv)
+int main(int argc, char* argv[])
 {
-    launchConsole();
+    if (argc >= 2 && strcmp (argv[1], "init") == 0) {
+	printf ("Initializing ...\n");
+	launchConsole(1);
+    } else
+	launchConsole(0);
 }
