@@ -210,12 +210,41 @@ void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
 	    // (W-2)
 	    if (check[index] < 0) {
 		// (W-3a)
-		check[index] = val;
-		ConstructUnusedList();
+		if (index != e_head) {
+		    // (W-3b)
+		    IndexType prev_index = e_head;
+		    while (prev_index <= DA_SIZE) {
+			if (index == -check[prev_index]) {
+			    check[prev_index] = check[index];
+			    break;
+			}
+
+			prev_index = -check[prev_index];
+		    }
+		    check[index] = val;
+		} else {
+		    e_head = -check[index];
+		    check[index] = val;
+		}
 	    } else if (val == 0) {
 		// (W-4a)
-		check[index] = val;
-		ConstructUnusedList();
+		if (index >= e_head) {
+		    // (W-4b)
+		    IndexType prev_index = e_head;
+		    while (prev_index <= DA_SIZE) {
+			if (prev_index < index &&
+			    index < -check[prev_index]) {
+			    check[index] = check[prev_index];
+			    check[prev_index] = -index;
+			    break;
+			}
+
+			prev_index = -check[prev_index];
+		    }
+		} else {
+		    check[index] = -e_head;
+		    e_head = index;
+		}
 	    } else {
 		check[index] = val;
 	    }
