@@ -50,6 +50,7 @@ private:
     KeyType max; // the maximal value of KeyType
 
     IndexType da_size;
+    IndexType e_head;
 
     int keylen(const KeyType *key);
     void W_Base(IndexType index, IndexType val);
@@ -60,6 +61,8 @@ private:
     void Modify(IndexType index, list<KeyType> &R, KeyType b);
     void Insert(IndexType index, IndexType pos, const KeyType *a);
     void Delete(IndexType index);
+
+    void ConstructUnusedList();
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
@@ -70,15 +73,12 @@ public:
 		int initialize);
     ~DoubleArray();
 
-/*
-    int remove(const KeyType *a); // Remove key "a".
-*/
-
     IndexType Search(const KeyType *a);
     IndexType Add(const KeyType *a);
     IndexType Remove(const KeyType *a);
 
     int loadWordList(const char *file);
+    void dump();
 };
 
 template <class IndexType, class KeyType>
@@ -101,7 +101,7 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 
 	check.clear();
 	check[0] = 0; /* undefined */
-	check[1] = 1;
+	check[1] = 0;
 	da_size = 1;
 
 	tail.clear();
@@ -118,6 +118,7 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 
     this->term = term;
     this->max = max;
+    this->e_head = 0;
 }
 
 template <class IndexType, class KeyType>
@@ -140,52 +141,133 @@ int DoubleArray<IndexType, KeyType>::keylen(const KeyType *a)
 template <class IndexType, class KeyType>
 void DoubleArray<IndexType, KeyType>::W_Base(IndexType index, IndexType val)
 {
-    base[index] = val;
+    if (e_head == 0) {
+	base[index] = val;
 
-    if (index > da_size)
-	da_size = index;
+	if (index > da_size)
+	    da_size = index;
+    } else {
+	// update unused element list
+	if (index > da_size) { // (W-1)
+	    base[index] = val;
+	    da_size = index;
+	} else {
+	    base[index] = val;
+	}
+	ConstructUnusedList();
+    }
 }
 
 template <class IndexType, class KeyType>
 void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
 {
-    check[index] = val;
+    if (e_head == 0) {
+	// unused element list is not in use.
+	check[index] = val;
 
-    if (index > da_size)
-	da_size = index;
+	if (index > da_size)
+	    da_size = index;
+    } else {
+	// ToDo: implement (W-1) - (W-4b)
+
+	// update unused element list
+	if (index > da_size) { // (W-1)
+	    check[index] = val;
+	    da_size = val;
+	} else {
+	    check[index] = val;
+	}
+	ConstructUnusedList();
+    }
 }
 
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
 {
-    IndexType q;
-    KeyType c;
-
-    // X-1
-    q = 1;
-
-    // X-2
-    do {
-	int ok = 1;
-
-	typename list<KeyType>::iterator c = A.begin();
-	while (c != A.end()) {
-	    if (check[q+(*c)] != 0) {
-		ok = 0;
-		break;
-	    }
-	    c++;
+    if (e_head) {
+	// unused element list
+	typename list<KeyType>::iterator p = A.begin();
+	KeyType c1 = *(A.begin()); p++;
+	while (p != A.end()) {
+	    if ((*p) < c1)
+		c1 = (*p);
+	    p++;
 	}
 
-        // this q meets the condition that check[q+c]=0 for all c in A.
-	if (ok) 
-	    return q;
+	// (XX-1)
+	IndexType e_index = e_head;
 
-	q++;
-    } while (q <= da_size);
+	{
+	    typename list<KeyType>::iterator c = A.begin();
+	    while (c != A.end()){
+//		printf ("c = %c\n", (*c));
+		c++;
+	    }
+	}
+//	printf("c1 = %c\n", c1);
 
-    // (X-3)
-    return q;
+	// (XX-2)
+	do {
+	    typename list<KeyType>::iterator c = A.begin();
+	    IndexType q = e_index - c1;
+
+	    if (q > 1) {
+		int ok = 1;
+		while (c != A.end()) {
+		    if (check[q+(*c)] >= 0) {
+			ok = 0;
+			break;
+		    }
+		    c++;
+		}
+
+		if (ok) {
+//		    printf ("q (1) = %d\n", q);
+		    return q;
+		}
+	    }
+
+	    e_index = -check[e_index];
+	} while (e_index <= da_size); // (XX-3)
+
+//	printf ("q (2) = %d, e_index = %d\n", e_index-c1, e_index);
+	if (e_index - c1 < 1)
+	    return 1;
+	else
+	    return e_index - c1;
+    } else {
+	IndexType q;
+	KeyType c;
+
+	// X-1
+	q = 1;
+
+	// X-2
+	do {
+	    int ok = 1;
+
+	    typename list<KeyType>::iterator c = A.begin();
+	    while (c != A.end()) {
+		if (check[q+(*c)] > 0) {
+		    ok = 0;
+		    break;
+		}
+		c++;
+	    }
+
+	    // this q meets the condition that check[q+c]=0 for all c in A.
+	    if (ok) {
+//		printf ("q (3) = %d\n", q);
+		return q;
+	    }
+
+	    q++;
+	} while (q <= da_size);
+
+	// (X-3)
+//	printf ("q (4) = %d\n", q);
+	return q;
+    }
 }
 
 template <class IndexType, class KeyType>
@@ -302,6 +384,26 @@ void DoubleArray<IndexType, KeyType>::Delete(IndexType index)
     W_Check (index, 0);
 }
 
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::ConstructUnusedList()
+{
+    int count;
+    vector<IndexType> r;
+
+    for (IndexType index=1; index<=da_size; index++) {
+	if (check[index] <= 0 && base[index] == 0)
+	    r.push_back (index);
+    }
+
+    if (r.size() < 3)
+	return; // don't construct unused list;
+
+    e_head = r[0];
+    for (IndexType i=0; i<=r.size()-2; i++)
+	check[r[i]] = -r[i+1];
+    check[r[r.size()-1]] = -(da_size + 1);
+}
+
 /*
  * This method check if a key is included in this double
  * If the specified key is found in this trie, this method returns
@@ -355,6 +457,10 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 	t = Forward (index, a[pos-1]);
 	if (t == 0) {
 	    Insert (index, pos, a);
+
+//	    if (e_head == 0)
+//		ConstructUnusedList ();
+
 	    return 1;
 	} else {
 	    index = t;
@@ -430,6 +536,39 @@ int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
 
     return count;
 }
+
+#define MIN(a,b) (a < b ? a : b)
+#define MAX(a,b) (a > b ? a : b)
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::dump()
+{
+    int i, j;
+
+    for (i = 1; i <= da_size; i += 15)
+    {
+	/* print indices */
+	printf ("       ");
+	for (j = i; j <= MIN(i+14, da_size); j++)
+	    printf ("%4d", j);
+	printf ("\n");
+
+	/* print the BASE array */
+	printf ("  BASE ");
+	for (j = i; j <= MIN(i+14, da_size); j++)
+	    printf ("%4d", base[j]);
+	printf ("\n");
+
+	/* print the CHECK array */
+	printf (" CEHCK ");
+	for (j = i; j <= MIN(i+14, da_size); j++)
+	    printf ("%4d", check[j]);
+	printf ("\n");
+
+	printf ("\n");
+    }
+}
+#undef MIN
+#undef MAX
 
 }
 

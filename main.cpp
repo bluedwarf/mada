@@ -33,7 +33,8 @@ void printConsoleHelp()
     printf (" add words: Add a word to this double array.\n");
     printf (" remove words: Delete a word from this double array.\n");
     printf (" search words: Search a word in this double array.\n");
-    printf (" load file: Add words in file.\n\n");
+    printf (" load file: Add words in file.\n");
+    printf (" search_file file: Search all words in file.\n\n");
 }
 
 void launchConsole()
@@ -67,6 +68,8 @@ void launchConsole()
 		printf("ADDED \"%s\".\n", key);
 	    else
 		printf("Failed to add \"%s\".\n", key);
+
+	    da.dump();
 	} else if (strncmp (command, "remove ", 7) == 0 &&
 		   command[7] != '\0') {
 	    strcpy (key, command + 7);
@@ -106,6 +109,31 @@ void launchConsole()
 		printf ("Added %d keys\n", count);
 		printf ("%f msec\n", (float)(end-start)/(float)CLOCKS_PER_SEC);
 	    }
+	} else if (strncmp (command, "search_file ", 12) == 0 &&
+		   command[12] != '\0') {
+	    strcpy (key, command + 12);
+	    key[strlen(key)-1] = '\0';
+	    FILE *f = fopen (key, "r");
+	    if (!f) {
+		printf ("Failed to open %s\n", key);
+		return;
+	    }
+
+	    while (fgets (key, 255, f)) {
+		size_t len = strlen (key);
+		
+		if (len >= 1)
+		{
+		    key[len-1] = term; /* replace '\n' with terminal symbol */
+		    if (da.Search (key)) {
+			printf("FOUND \"%s\".\n", key);
+		    } else {
+			printf("Failed to find \"%s\".\n", key);
+		    }
+		}
+	    }
+
+	    fclose (f);
 	} else {
 	    printConsoleHelp ();
 	}
