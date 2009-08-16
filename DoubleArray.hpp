@@ -21,23 +21,6 @@
 
 /*
  * Double Array with C++.
- *
- * == About indices of array ==
- * In the references [1] and [2], every first index of array and string
- * is "1" instead of "0". Therefore, in this implementation, BASE, CHECK and
- * TAIL arrays start with index "1" while index of array usually starts with
- * 0 in C++. Thus, the 0th elements of these arrays are undefined.
- *
- * On the other hand, string processing and other array manipulation in
- * this program follows normal C/C++ convention, where index of array
- * starts with "0". Be careful, some indices in this implementation are
- * different from counterparts of reference [1] or [2].
- *
- * == Reference ==
- * [1] 吉村賢治，「自然言語処理の基礎」，サイエンス社，2000，pp.174-177．
- *     (ISBN 4-7819-0956-6)
- * [2] 青江順一，ダブル配列による高速ディジタル検索アルゴリズム，電子情報
- *     通信学会論文誌，J71-D，9，pp.1592-1600，1987．
  */
 
 #ifndef _MADA_DOUBLE_ARRAY_HPP_
@@ -184,23 +167,12 @@ void DoubleArray<IndexType, KeyType>::dump()
 #undef MAX
 
 /*
- * このメソッドはダブル配列に指定された見出し語が存在するのかどうかを調べ
- * ます。もし見出し語が存在するのであれば1を、そうでなければ0を返します。
- * 引数:
- *  a: 見出し語。ただし、文字列の末尾は終端記号 term で終わっていなければ
- *     ならない。
+ * This method check if the specified key is included in this double
+ * array. If so this method returns 1, otherwise 0.
  *
- * この関数で使用される変数と参考文献[2]の図2は以下のように対応している。
- *  r => r
- *  h => h
- *  n => n - 1
- *  a_1 => a[1]
- *  a_h => a[h - 1]
- *  S_TEMP => s_temp
- *  FETCH_STR => fetch_str
- *  STR_CMP => str_cmp
- *  return(TRUE) => return 1;
- *  return(FALSE) => return 0;
+ * Argument:
+ *   a: Key to be added.
+ *      The end of this string must be ended with terminal symbole "term".
  */
 template <class IndexType, class KeyType>
 int DoubleArray<IndexType, KeyType>::find(const KeyType *a)
@@ -248,9 +220,7 @@ int DoubleArray<IndexType, KeyType>::keylen(const KeyType *a)
 }
 
 /*
- * 参考文献[2]の図2におけるFETCH_STRに対応する関数
- *
- * 返り値の文字列は呼び出し元によってメモリが開放されなければいけない。
+ * Note that the returned value must be freed by invoker.
  */
 template <class IndexType, class KeyType>
 KeyType *DoubleArray<IndexType, KeyType>::fetch_str(IndexType p)
@@ -270,9 +240,6 @@ KeyType *DoubleArray<IndexType, KeyType>::fetch_str(IndexType p)
     return ret;
 }
 
-/*
- * 参考文献[2]の図2におけるSTR_CMPに対応する関数
- */
 template <class IndexType, class KeyType>
 int DoubleArray<IndexType, KeyType>::str_cmp(const KeyType *str1,
 					     const KeyType *str2)
@@ -292,33 +259,12 @@ int DoubleArray<IndexType, KeyType>::str_cmp(const KeyType *str1,
 }
 
 /*
- * このメソッドはダブル配列に指定された見出し語を挿入します。
- * 見出し語の挿入に成功すれば1を返し、すでに見出し語がダブル配列に存在して
- * いた場合には0を返します。
- * 引数:
- *  a: 見出し語。ただし、文字列の末尾は終端記号 term で終わっていなければ
- *     ならない。
+ * This method inserts a new key to this double array. If it successfully
+ * added the specified key, it returns 0. Otherwise, it returns 0.
  *
- * この関数で使用される変数と参考文献[2]の図2は以下のように対応している。
- *  r => r
- *  h => h
- *  n => n - 1
- *  a_1 => a[1]
- *  a_h => a[h - 1]
- *  S_TEMP => s_temp
- *  FETCH_STR => double_array_fetch_str
- *  STR_CMP => double_array_str_cmp
- *  return(TRUE) => return 0;
- *  return(FALSE) => return 1;
- *
- * ただし、参考文献[2]の「4.1 キーの追加」に記述されている変更を加えてある。
- * また、C言語の慣習に合わせるため、返り値がdouble_array_find関数とは逆になっ
- * ている。
- *
- * 参考文献[2]において、「4.1 キーの追加」の章の「(b) 行(1-3)のreturn(FALSE)
- * の変更」におけるrは紛らわしい。B_INSERT関数の第1引数に用いられるrは図2の
- * rと同一である。しかし、その他のrは図2におけるSTR_CMP関数の戻り値とすると
- * 矛盾が無くなる。よって、その他のrは本メソッドでは変数pとしてある。
+ * Argument:
+ *   a: Key to be added.
+ *      The end of this string must be ended with terminal symbole "term".
  */
 template <class IndexType, class KeyType>
 int DoubleArray<IndexType, KeyType>::insert(const KeyType *a)
@@ -397,9 +343,6 @@ void DoubleArray<IndexType, KeyType>::a_insert(IndexType r, const KeyType *b)
     ins_str (r, b, pos);
 }
 
-/*
- * 参考文献[2]におけるINS_STR関数に対応
- */
 template <class IndexType, class KeyType>
 void DoubleArray<IndexType, KeyType>::ins_str(IndexType r, const KeyType *e, IndexType d_pos)
 {
@@ -478,27 +421,17 @@ IndexType DoubleArray<IndexType, KeyType>::x_check(vector<KeyType> &c_list)
 	i = 0;
 	while (1)
 	{
-	    /*
-	     * 全てのcに対して CHECK[q + c] == 0 を満たすので、qを返す。
-	     */
 	    if (i == c_list.size())
 		return q;
 
 	    c = c_list[i];
 
-	    /*
-	     * CHECK配列の大きさを超えるインデックスの要素は0なので、
-	     */
 	    if (q + c > check[1])
 	    {
 		i++;
 		continue;
 	    }
 
-	    /*
-	     * 全てのcに対して CHECK[q + c] == 0 を満たさないので、もうひとつ大きなqを
-	     * 試す。
-	     */
 	    if (check[q + c] != 0)
 		break;
 
