@@ -20,11 +20,7 @@
  */
 
 #include <stdio.h>
-#include <assert.h>
-
-#include <iostream>
-#include <list>
-using namespace std;
+#include <time.h>
 
 #include "MappedArray.hpp"
 #include "DoubleArray.hpp"
@@ -100,11 +96,16 @@ void launchConsole()
 	    int len = strlen (key);
 	    key[len-1] = '\0'; // replace '\n' with '\0'
 
+	    clock_t start = clock();
 	    int count = da.loadWordList (key);
+	    clock_t end = clock();
+
 	    if (count == -1)
 		printf ("Failed to open %s\n", key);
-	    else
+	    else {
 		printf ("Added %d keys\n", count);
+		printf ("%f msec\n", (float)(end-start)/(float)CLOCKS_PER_SEC);
+	    }
 	} else {
 	    printConsoleHelp ();
 	}
