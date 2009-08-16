@@ -180,13 +180,26 @@ void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
 	// ToDo: implement (W-1) - (W-4b)
 
 	// update unused element list
-	if (index > DA_SIZE) { // (W-1)
+	if (index > DA_SIZE) {
+	    // (W-1)
+	    IndexType e_index;
+
+	    if (index == DA_SIZE + 1) {
+		e_index = e_head;
+		while (-check[e_index] <= DA_SIZE)
+		    e_index = -check[e_index];
+	    } else {
+		for (e_index = DA_SIZE + 1; e_index < index-1; e_index++)
+		    check[e_index] = -(e_index+1);
+	    }
+
 	    check[index] = val;
 	    DA_SIZE = index;
+	    check[e_index] = -(DA_SIZE + 1);
 	} else {
 	    check[index] = val;
+	    ConstructUnusedList();
 	}
-	ConstructUnusedList();
     }
 }
 
