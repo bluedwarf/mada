@@ -68,9 +68,9 @@ private:
 
     vector<string> static_keys;
     void StaticInsert(IndexType s, int depth, int start, int end);
-public:
-    void ConstructUnusedList();
 
+    void ConstructUnusedList();
+public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
 		const char *tailfile,
