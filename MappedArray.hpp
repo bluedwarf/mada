@@ -146,7 +146,7 @@ void MappedArray<T>::clear() throw (int)
 }
 
 template <class T>
-void MappedArray<T>::resize(size_t new_size) throw (int)
+inline void MappedArray<T>::resize(size_t new_size) throw (int)
 {
     if (mapped_size >= new_size)
         return;

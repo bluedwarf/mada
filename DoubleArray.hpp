@@ -180,7 +180,7 @@ void DoubleArray<IndexType, KeyType>::W_Base(IndexType index, IndexType val)
 }
 
 template <class IndexType, class KeyType>
-void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
+inline void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
 {
     if (e_head == 0) {
 	// unused element list is not in use.
@@ -253,7 +253,7 @@ void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
 }
 
 template <class IndexType, class KeyType>
-IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
+inline IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
 {
     if (e_head) {
 	// unused element list
@@ -345,7 +345,7 @@ int DoubleArray<IndexType, KeyType>::Forward(IndexType s, KeyType a)
 }
 
 template <class IndexType, class KeyType>
-list<KeyType> DoubleArray<IndexType, KeyType>::GetLabel(IndexType index)
+inline list<KeyType> DoubleArray<IndexType, KeyType>::GetLabel(IndexType index)
 {
     IndexType t;
     list<KeyType> ret;
@@ -373,27 +373,34 @@ list<KeyType> DoubleArray<IndexType, KeyType>::GetLabel(IndexType index)
 }
 
 template <class IndexType, class KeyType>
-void DoubleArray<IndexType, KeyType>::Modify(IndexType index, list<KeyType> &R, KeyType b)
+inline void DoubleArray<IndexType, KeyType>::Modify(IndexType index, list<KeyType> &R, KeyType b)
 {
+    IndexType t, old_t, q;
+
     // (M-1)
     IndexType oldbase = base[index];
 
+/*
     list<KeyType> tmp = R;
     tmp.push_back (b);
     W_Base (index, X_Check (tmp));
+*/
+    R.push_back (b);
+    W_Base (index, X_Check (R));
+    R.pop_back ();
 
     // (M-2)
     typename list<KeyType>::iterator c = R.begin();
     while (c != R.end()) {
-	IndexType t = base[index] + (*c);
+	t = base[index] + (*c);
 	W_Check (t, index);
 
-	IndexType old_t = oldbase + (*c);
+	old_t = oldbase + (*c);
 	W_Base (t, base[old_t]);
 
 	if (base[old_t] > 0) {
 	    // (M-3)
-	    for (IndexType q=1; q<=DA_SIZE; q++)
+	    for (q=1; q<=DA_SIZE; q++)
 		if (check[q] == old_t)
 		    W_Check (q, t);
 	}
