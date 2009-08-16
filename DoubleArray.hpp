@@ -21,12 +21,17 @@
 
 /*
  * Double Array with C++.
+ *
+ *
+ * Warning:
+ *  IndexType must be signed value.
  */
 
 #ifndef _MADA_DOUBLE_ARRAY_HPP_
 #define _MADA_DOUBLE_ARRAY_HPP_
 
 #include <vector>
+#include <list>
 #include "MappedArray.hpp"
 
 using namespace std;
@@ -39,22 +44,29 @@ private:
     MappedArray<IndexType> base;
     MappedArray<IndexType> check;
     MappedArray<KeyType> tail;
-    IndexType pos;
+    IndexType tail_pos;
     KeyType term; // terminal symbol
     KeyType max; // the maximal value of KeyType
 
-    int keylen(const KeyType *key);
+/*
     KeyType *fetch_str(IndexType p);
     int str_cmp(const KeyType *str1, const KeyType *str2);
-    void a_insert(IndexType r, const KeyType *b);
     void ins_str(IndexType r, const KeyType *e, IndexType d_pos);
     IndexType set_str(IndexType p, const KeyType *y, IndexType y_len);
-    void b_insert(IndexType r, const KeyType *b, const KeyType *c, const KeyType *d);
-    IndexType x_check(vector<KeyType> &c_list);
     vector<KeyType> set_list(IndexType r);
     IndexType modify(IndexType current, IndexType r,
 		     KeyType a, vector<KeyType> c_list);
+*/
 
+    IndexType da_size;
+
+    int keylen(const KeyType *key);
+    void W_Base(IndexType index, IndexType val);
+    void W_Check(IndexType index, IndexType val);
+    IndexType X_Check(list<KeyType> &A);
+    int Forward(IndexType s, KeyType a);
+    list<IndexType> GetLabel(IndexType index);
+    void Insert(IndexType index, IndexType pos, const KeyType *a);
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
@@ -65,10 +77,12 @@ public:
 		int initialize);
     ~DoubleArray();
 
-    void dump();
-    int find(const KeyType *a); // Check key "a" whether it is registered.
-    int insert(const KeyType *a); // Register key "a".
+/*
     int remove(const KeyType *a); // Remove key "a".
+*/
+
+    IndexType Search(const KeyType *a);
+    IndexType Add(const KeyType *a);
 
     int loadWordList(const char *file);
 };
@@ -94,14 +108,15 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 	check.clear();
 	check[0] = 0; /* undefined */
 	check[1] = 1;
+	da_size = 1;
 
 	tail.clear();
 	tail[0] = 0; /* undefined */
-	this->pos = 1;
+	this->tail_pos = 1;
     }
     else
     {
-	this->pos = pos;
+	this->tail_pos = pos;
     }
 
     if (term <= 0)
@@ -117,97 +132,6 @@ DoubleArray<IndexType, KeyType>::~DoubleArray()
 
 }
 
-#define MIN(a,b) (a < b ? a : b)
-#define MAX(a,b) (a > b ? a : b)
-template <class IndexType, class KeyType>
-void DoubleArray<IndexType, KeyType>::dump()
-{
-    int i, j;
-
-    for (i = 1; i <= check[1]; i += 15)
-    {
-	/* print indices */
-	printf ("       ");
-	for (j = i; j <= MIN(i+14, check[1]); j++)
-	    printf ("%4d", j);
-	printf ("\n");
-
-	/* print the BASE array */
-	printf ("  BASE ");
-	for (j = i; j <= MIN(i+14, check[1]); j++)
-	    printf ("%4d", base[j]);
-	printf ("\n");
-
-	/* print the CHECK array */
-	printf (" CEHCK ");
-	for (j = i; j <= MIN(i+14, check[1]); j++)
-	    printf ("%4d", check[j]);
-	printf ("\n");
-
-	printf ("\n");
-    }
-
-    for (i = 1; i <= pos-1; i += 15)
-    {
-	/* print indices */
-	printf ("       ");
-	for (j = i; j <= MIN(i+14, pos-1); j++)
-	    printf ("%4d", j);
-	printf ("\n");
-
-	/* print the TAIL array */
-	printf ("  TAIL ");
-	for (j = i; j <= MIN(i+14, pos-1); j++)
-	    printf ("%4d", tail[j]);
-	printf ("\n");
-	printf ("\n");
-    }
-}
-#undef MIN
-#undef MAX
-
-/*
- * This method check if the specified key is included in this double
- * array. If so this method returns 1, otherwise 0.
- *
- * Argument:
- *   a: Key to be added.
- *      The end of this string must be ended with terminal symbole "term".
- */
-template <class IndexType, class KeyType>
-int DoubleArray<IndexType, KeyType>::find(const KeyType *a)
-{
-    IndexType r, h, t, n, p;
-    KeyType *s_temp;
-
-    r = 1;
-    h = 0;
-    n = keylen(a);
-
-    do
-    {
-	h += 1;
-	t = base[r] + a[h-1];
-
-	if (t > check[1] || check[t] != r)
-	    return 0;
-	else
-	    r = t;
-    } while (!(base[r] < 0));
-
-    if (h == n + 1)
-	return 1;
-    else
-	s_temp = fetch_str (-base[r]);
-
-    p = str_cmp (a + h, s_temp);
-    delete (s_temp);
-    if (p == -1)
-	return 1;
-    else
-	return 0;
-}
-
 template <class IndexType, class KeyType>
 int DoubleArray<IndexType, KeyType>::keylen(const KeyType *a)
 {
@@ -219,9 +143,114 @@ int DoubleArray<IndexType, KeyType>::keylen(const KeyType *a)
     return i;
 }
 
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::W_Base(IndexType index, IndexType val)
+{
+    base[index] = val;
+
+    if (index > da_size)
+	da_size = index;
+}
+
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
+{
+    check[index] = val;
+
+    if (index > da_size)
+	da_size = index;
+}
+
+template <class IndexType, class KeyType>
+IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
+{
+    IndexType q;
+    KeyType c;
+
+    // X-1
+    q = 1;
+
+    // X-2
+    do {
+	int ok = 1;
+
+	typename list<KeyType>::iterator c = A.begin();
+	while (c != A.end()) {
+	    if (check[q+(*c)] != 0) {
+		ok = 0;
+		break;
+	    }
+	    c++;
+	}
+
+        // this q meets the condition that check[q+c]=0 for all c in A.
+	if (ok) 
+	    return q;
+
+	q++;
+    } while (q <= da_size);
+
+    // (X-3)
+    return q;
+}
+
+template <class IndexType, class KeyType>
+int DoubleArray<IndexType, KeyType>::Forward(IndexType s, KeyType a)
+{
+    IndexType t;
+
+    t = base[s] + a;
+    if (0 < t && t < da_size+1 &&
+	check[t] == s)
+	return t;
+    else
+	return 0;
+}
+
+template <class IndexType, class KeyType>
+list<IndexType> DoubleArray<IndexType, KeyType>::GetLabel(IndexType index)
+{
+    
+}
+
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::Insert(IndexType index, IndexType pos, const KeyType *a)
+{
+    int n = keylen (a);
+
+    // (I-1)
+    if (check[base[index] + a[pos-1]] > 0) {
+	// ToDo: Implement (I-1) in reference [3].
+	fprintf (stderr, "Error\n");
+    }
+
+    // (I-2)
+    IndexType t = base[index] + a[pos-1];
+    W_Check (t, index);
+    index = t;
+    pos++;
+
+    // (I-3)
+    while (pos <= n+1) {
+	list<KeyType> A;
+	A.push_back (a[pos-1]);
+	IndexType newbase = X_Check (A);
+
+	W_Base (index, newbase);
+
+	t = base[index] + a[pos-1];
+	W_Check (t, index);
+	index = t;
+	pos++;
+    }
+
+    W_Base (t, -1); // ToDo: Change -1 according to the record.
+}
+
 /*
  * Note that the returned value must be freed by invoker.
  */
+/*
 template <class IndexType, class KeyType>
 KeyType *DoubleArray<IndexType, KeyType>::fetch_str(IndexType p)
 {
@@ -258,91 +287,6 @@ int DoubleArray<IndexType, KeyType>::str_cmp(const KeyType *str1,
     return i;
 }
 
-/*
- * This method inserts a new key to this double array. If it successfully
- * added the specified key, it returns 0. Otherwise, it returns 0.
- *
- * Argument:
- *   a: Key to be added.
- *      The end of this string must be ended with terminal symbole "term".
- */
-template <class IndexType, class KeyType>
-int DoubleArray<IndexType, KeyType>::insert(const KeyType *a)
-{
-    IndexType r, h, t, n, p;
-    KeyType *s_temp;
-
-    r = 1;
-    h = 0;
-    n = keylen(a);
-
-    do
-    {
-	h += 1;
-	t = base[r] + a[h-1];
-
-	if (t > check[1] || check[t] != r)
-	{
-	    KeyType *b = new KeyType [n + 2 - h];
-	    for (int i=0; i<n+2-h; i++)
-		b[i] = a[i + h - 1];
-
-	    a_insert (r, b);
-	    delete b;
-
-	    return 1;
-	}
-	else
-	    r = t;
-    } while (!(base[r] < 0));
-
-    if (h == n + 1)
-	return 0;
-    else
-	s_temp = fetch_str (-base[r]);
-
-    p = str_cmp (a + h, s_temp);
-    if (p == -1)
-    {
-	delete s_temp;
-	return 0;
-    }
-    else
-    {
-	KeyType *x = new KeyType [p+1];
-	for (int i=0; i<p; i++)
-	    x[i] = a[h+i];
-	x[p] = term;
-
-	b_insert (r, x, a + h + p, s_temp + p);
-
-	delete s_temp;
-	delete x;
-
-	return 1;
-    }
-}
-
-template <class IndexType, class KeyType>
-void DoubleArray<IndexType, KeyType>::a_insert(IndexType r, const KeyType *b)
-{
-    IndexType t;
-
-    t = base[r] + b[0];
-    if (check[t] != 0)
-    {
-	vector<KeyType> list1 = set_list (r);
-	vector<KeyType> list2 = set_list (check[t]);
-
-	if (list1.size() + 1 < list2.size())
-	    modify (r, r, b[0], list1);
-	else
-	    modify (r, check[t], 0, list2);
-    }
-
-    ins_str (r, b, pos);
-}
-
 template <class IndexType, class KeyType>
 void DoubleArray<IndexType, KeyType>::ins_str(IndexType r, const KeyType *e, IndexType d_pos)
 {
@@ -352,8 +296,8 @@ void DoubleArray<IndexType, KeyType>::ins_str(IndexType r, const KeyType *e, Ind
     t = base[r] + e[0];
     check[t] = r;
     base[t] = -d_pos;
-    if (t > check[1])
-	check[1] = t;
+    if (t > da_size)
+	da_size = t;
 
     e_len = keylen (e);
     e_with_record = new KeyType [e_len + 1];
@@ -361,7 +305,7 @@ void DoubleArray<IndexType, KeyType>::ins_str(IndexType r, const KeyType *e, Ind
 	e_with_record[i] = e[i+1];
     e_with_record[e_len] = '$'; // record (dummy)
 
-    pos = set_str (d_pos, e_with_record, e_len + 1);
+    tail_pos = set_str (d_pos, e_with_record, e_len + 1);
 
     delete e_with_record;
 }
@@ -374,74 +318,10 @@ IndexType DoubleArray<IndexType, KeyType>::set_str(IndexType p, const KeyType *y
     for (i=0; i<y_len; i++)
 	tail[p + i] = y[i];
 
-    return (p == pos ? pos + y_len : pos);
+    return (p == tail_pos ? tail_pos + y_len : tail_pos);
 }
-
-template <class IndexType, class KeyType>
-void DoubleArray<IndexType, KeyType>::b_insert(IndexType r,
-					       const KeyType *b,
-					       const KeyType *c,
-					       const KeyType *d)
-{
-    IndexType old_pos = -base[r];
-
-    for (int i=0; i<keylen(b); i++)
-    {
-	vector<KeyType> c_list;
-	c_list.push_back (b[i]);
-	base[r] = x_check (c_list);
-
-	if (base[r] + b[i] > check[1])
-	    check[1] = base[r] + b[i];
-
-	check[base[r] + b[i]] = r;
-	r = base[r] + b[i];
-    }
-
-    vector<KeyType> c2_list;
-    c2_list.push_back (c[0]);
-    c2_list.push_back (d[0]);
-    base[r] = x_check (c2_list);
-    if (r > check[1])
-	check[1] = r;
-    ins_str (r, d, old_pos);
-    ins_str (r, c, pos);
-}
-
-template <class IndexType, class KeyType>
-IndexType DoubleArray<IndexType, KeyType>::x_check(vector<KeyType> &c_list)
-{
-    int i;
-    IndexType q;
-    KeyType c;
-
-    q = 1;
-    while (1)
-    {
-	i = 0;
-	while (1)
-	{
-	    if (i == c_list.size())
-		return q;
-
-	    c = c_list[i];
-
-	    if (q + c > check[1])
-	    {
-		i++;
-		continue;
-	    }
-
-	    if (check[q + c] != 0)
-		break;
-
-	    i++;
-	}
-
-	q++;
-    }
-}
-
+*/
+/*
 template <class IndexType, class KeyType>
 vector<KeyType> DoubleArray<IndexType, KeyType>::set_list(IndexType r)
 {
@@ -502,14 +382,14 @@ IndexType DoubleArray<IndexType, KeyType>::modify(IndexType current,
 	t = old_base + c;
 	t_dash = base[r] + c;
 
-	if (t_dash > check[1])
-	    check[1] = t_dash;
+	if (t_dash > da_size)
+	    da_size = t_dash;
 	check[t_dash] = r;
 	base[t_dash] = base[t];
 
 	if (base[t] > 0)
 	{
-	    for (int q=2; q<=check[1]; q++)
+	    for (int q=2; q<=da_size; q++)
 	    {
 		if (check[q] == t)
 		    check[q] = t_dash;
@@ -541,7 +421,7 @@ int DoubleArray<IndexType, KeyType>::remove(const KeyType *a)
 	h += 1;
 	t = base[r] + a[h-1];
 
-	if (t > check[1] || check[t] != r)
+	if (t > da_size || check[t] != r)
 	    return 0;
 	else
 	    r = t;
@@ -566,6 +446,68 @@ int DoubleArray<IndexType, KeyType>::remove(const KeyType *a)
     }
     else
 	return 0;
+}
+*/
+
+/*
+ * This method check if a key is included in this double
+ * If the specified key is found in this trie, this method returns
+ * the index number of the leaf node (the index of the BASE array).
+ * Otherwise, it returns 0.
+ *
+ * Argument:
+ *   a: Key to be added.
+ *      The end of this string must be ended with terminal symbole "term".
+ */
+template <class IndexType, class KeyType>
+IndexType DoubleArray<IndexType, KeyType>::Search(const KeyType *a)
+{
+    // D-1
+    IndexType index = 1;
+    IndexType pos = 1;
+    IndexType t;
+
+    do {
+	// D-2
+	t = Forward (index, a[pos-1]);
+	if (t == 0)
+	    return 0;
+	else {
+	    index = t;
+	    pos++;
+	}
+    } while (base[index] >= 0); // D-3
+
+    return index;
+}
+
+/*
+ * This method inserts a new key to this double array. If it successfully
+ * added the specified key, it returns 0. Otherwise, it returns 0.
+ *
+ * Argument:
+ *   a: Key to be added.
+ *      The end of this string must be ended with terminal symbole "term".
+ */
+template <class IndexType, class KeyType>
+IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
+{
+    IndexType index = 1;
+    IndexType pos = 1;
+    IndexType t;
+
+    do {
+	t = Forward (index, a[pos-1]);
+	if (t == 0) {
+	    Insert (index, pos, a);
+	    return 1;
+	} else {
+	    index = t;
+	    pos++;
+	}
+    } while (base[index] >= 0);
+
+    return 0;
 }
 
 /*
@@ -594,7 +536,7 @@ int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
 	if (len >= 1)
 	{
 	    word[len-1] = term; /* replace '\n' with terminal symbol */
-	    count += insert (word);
+	    count += Add (word);
 	}
     }
     fclose (f);

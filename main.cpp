@@ -63,10 +63,11 @@ void launchConsole()
 	    int len = strlen (key);
 	    key[len-1] = term; // replace '\n' with the terminal symbol.
 
-	    if (da.insert (key))
+	    if (da.Add (key))
 		printf("ADDED \"%s\".\n", key);
 	    else
 		printf("Failed to add \"%s\".\n", key);
+/*
 	} else if (strncmp (command, "delete ", 7) == 0 &&
 		   command[7] != '\0') {
 	    strcpy (key, command + 7);
@@ -78,6 +79,7 @@ void launchConsole()
 		printf("DELETED \"%s\".\n", key);
 	    else
 		printf("Failed to delete \"%s\".\n", key);
+*/
 	} else if (strncmp (command, "search ", 7) == 0 &&
 		   command[7] != '\0') {
  	    strcpy (key, command + 7);
@@ -85,7 +87,7 @@ void launchConsole()
 	    int len = strlen (key);
 	    key[len-1] = term; // replace '\n' with the terminal symbol.
 
-	    if (da.find (key))
+	    if (da.Search (key))
 		printf("FOUND \"%s\".\n", key);
 	    else
 		printf("Failed to find \"%s\".\n", key);
