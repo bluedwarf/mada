@@ -207,17 +207,18 @@ void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
 	    DA_SIZE = index;
 	    check[e_index] = -(DA_SIZE + 1);
 	} else {
-/*
 	    // (W-2)
 	    if (check[index] < 0) {
 		// (W-3a)
+		check[index] = val;
+		ConstructUnusedList();
 	    } else if (val == 0) {
 		// (W-4a)
+		check[index] = val;
+		ConstructUnusedList();
+	    } else {
+		check[index] = val;
 	    }
-*/
-
-	    check[index] = val;
-	    ConstructUnusedList();
 	}
     }
 }
