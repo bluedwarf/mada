@@ -143,6 +143,9 @@ void launchConsole(int init)
 	    da.dump();
 	} else if (strncmp (command, "info\n", 5) == 0) {
 	    da.printInfo();
+	} else if (strncmp (command, "e\n", 2) == 0) {
+	    da.ConstructUnusedList();
+	    printf ("OK\n");
 	} else {
 	    printConsoleHelp ();
 	}

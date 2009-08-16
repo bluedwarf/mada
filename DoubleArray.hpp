@@ -66,11 +66,11 @@ private:
     void Insert(IndexType index, IndexType pos, const KeyType *a);
     void Delete(IndexType index);
 
-    void ConstructUnusedList();
-
     vector<string> static_keys;
     void StaticInsert(IndexType s, int depth, int start, int end);
 public:
+    void ConstructUnusedList();
+
     DoubleArray(const char *basefile,
 		const char *checkfile,
 		const char *tailfile,
@@ -182,7 +182,7 @@ void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType val)
 	// update unused element list
 	if (index > DA_SIZE) { // (W-1)
 	    check[index] = val;
-	    DA_SIZE = val;
+	    DA_SIZE = index;
 	} else {
 	    check[index] = val;
 	}
@@ -206,24 +206,15 @@ IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
 	// (XX-1)
 	IndexType e_index = e_head;
 
-	{
-	    typename list<KeyType>::iterator c = A.begin();
-	    while (c != A.end()){
-//		printf ("c = %c\n", (*c));
-		c++;
-	    }
-	}
-//	printf("c1 = %c\n", c1);
-
 	// (XX-2)
 	do {
 	    typename list<KeyType>::iterator c = A.begin();
 	    IndexType q = e_index - c1;
 
-	    if (q > 1) {
+	    if (q >= 1) {
 		int ok = 1;
 		while (c != A.end()) {
-		    if (check[q+(*c)] >= 0) {
+		    if (check[q+(*c)] > 0) {
 			ok = 0;
 			break;
 		    }
@@ -528,8 +519,8 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 	if (t == 0) {
 	    Insert (index, pos, a);
 
-//	    if (e_head == 0)
-//		ConstructUnusedList ();
+	    if (e_head == 0)
+		ConstructUnusedList ();
 
 	    ready = 1;
 	    return 1;
