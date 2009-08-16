@@ -59,6 +59,7 @@ private:
     list<KeyType> GetLabel(IndexType index);
     void Modify(IndexType index, list<KeyType> &R, KeyType b);
     void Insert(IndexType index, IndexType pos, const KeyType *a);
+    void Delete(IndexType index);
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
@@ -75,6 +76,7 @@ public:
 
     IndexType Search(const KeyType *a);
     IndexType Add(const KeyType *a);
+    IndexType Remove(const KeyType *a);
 
     int loadWordList(const char *file);
 };
@@ -293,6 +295,12 @@ void DoubleArray<IndexType, KeyType>::Insert(IndexType index, IndexType pos, con
     W_Base (t, -1); // ToDo: Change -1 according to the record.
 }
 
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::Delete(IndexType index)
+{
+    W_Base (index, 0);
+    W_Check (index, 0);
+}
 
 /*
  * This method check if a key is included in this double
@@ -301,19 +309,19 @@ void DoubleArray<IndexType, KeyType>::Insert(IndexType index, IndexType pos, con
  * Otherwise, it returns 0.
  *
  * Argument:
- *   a: Key to be added.
- *      The end of this string must be ended with terminal symbole "term".
+ *   a: Key to be searched.
+ *      The end of this string must be ended with terminal symbol "term".
  */
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::Search(const KeyType *a)
 {
-    // D-1
+    // (D-1)
     IndexType index = 1;
     IndexType pos = 1;
     IndexType t;
 
     do {
-	// D-2
+	// (D-2)
 	t = Forward (index, a[pos-1]);
 	if (t == 0)
 	    return 0;
@@ -321,27 +329,29 @@ IndexType DoubleArray<IndexType, KeyType>::Search(const KeyType *a)
 	    index = t;
 	    pos++;
 	}
-    } while (base[index] >= 0); // D-3
+    } while (base[index] >= 0); // (D-3)
 
     return index;
 }
 
 /*
  * This method inserts a new key to this double array. If it successfully
- * added the specified key, it returns 0. Otherwise, it returns 0.
+ * adds the specified key, it returns 1. Otherwise, it returns 0.
  *
  * Argument:
  *   a: Key to be added.
- *      The end of this string must be ended with terminal symbole "term".
+ *      The end of this string must be ended with terminal symbol "term".
  */
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 {
+    // (D-1)
     IndexType index = 1;
     IndexType pos = 1;
     IndexType t;
 
     do {
+	// (D-2)
 	t = Forward (index, a[pos-1]);
 	if (t == 0) {
 	    Insert (index, pos, a);
@@ -350,9 +360,41 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 	    index = t;
 	    pos++;
 	}
-    } while (base[index] >= 0);
+    } while (base[index] >= 0); // (D-3)
 
     return 0;
+}
+
+/*
+ * This method remove an existing key from this double array. If the
+ * specified key is successfully removed, it returns 1. Otherwise, it
+ * returns 0.
+ *
+ * Argument:
+ *   a: Key to be removed.
+ *      The end of this string must be ended with terminal symbole "term".
+ */
+template <class IndexType, class KeyType>
+IndexType DoubleArray<IndexType, KeyType>::Remove(const KeyType *a)
+{
+    // (D-1)
+    IndexType index = 1;
+    IndexType pos = 1;
+    IndexType t;
+
+    do {
+	// (D-2)
+	t = Forward (index, a[pos-1]);
+	if (t == 0)
+	    return 0;
+	else {
+	    index = t;
+	    pos++;
+	}
+    } while (base[index] >= 0); // (D-3)
+
+    Delete (index);
+    return 1;
 }
 
 /*

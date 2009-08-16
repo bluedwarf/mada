@@ -35,7 +35,7 @@ void printConsoleHelp()
     printf (" exit: Exit from this console.\n");
     printf (" quit: Exit from this console.\n");
     printf (" add words: Add a word to this double array.\n");
-    printf (" delete words: Delete a word from this double array.\n");
+    printf (" remove words: Delete a word from this double array.\n");
     printf (" search words: Search a word in this double array.\n");
     printf (" load file: Add words in file.\n\n");
 }
@@ -71,19 +71,17 @@ void launchConsole()
 		printf("ADDED \"%s\".\n", key);
 	    else
 		printf("Failed to add \"%s\".\n", key);
-/*
-	} else if (strncmp (command, "delete ", 7) == 0 &&
+	} else if (strncmp (command, "remove ", 7) == 0 &&
 		   command[7] != '\0') {
 	    strcpy (key, command + 7);
 
 	    int len = strlen (key);
 	    key[len-1] = term; // replace '\n' with the terminal symbol.
 
-	    if (da.remove (key))
+	    if (da.Remove (key))
 		printf("DELETED \"%s\".\n", key);
 	    else
 		printf("Failed to delete \"%s\".\n", key);
-*/
 	} else if (strncmp (command, "search ", 7) == 0 &&
 		   command[7] != '\0') {
  	    strcpy (key, command + 7);
