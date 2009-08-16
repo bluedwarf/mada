@@ -34,7 +34,8 @@ void printConsoleHelp()
     printf (" remove words: Delete a word from this double array.\n");
     printf (" search words: Search a word in this double array.\n");
     printf (" load file: Add words in file.\n");
-    printf (" search_file file: Search all words in file.\n\n");
+    printf (" search_file file: Search all words in file.\n");
+    printf (" dump: Dump double array.\n\n");
 }
 
 void launchConsole()
@@ -134,6 +135,8 @@ void launchConsole()
 	    }
 
 	    fclose (f);
+	} else if (strncmp (command, "dump\n", 5) == 0) {
+	    da.dump();
 	} else {
 	    printConsoleHelp ();
 	}

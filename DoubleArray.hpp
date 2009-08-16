@@ -31,6 +31,7 @@
 #ifndef _MADA_DOUBLE_ARRAY_HPP_
 #define _MADA_DOUBLE_ARRAY_HPP_
 
+#include <string>
 #include <vector>
 #include <list>
 #include "MappedArray.hpp"
@@ -52,6 +53,8 @@ private:
     IndexType da_size;
     IndexType e_head;
 
+    int initialized;
+
     int keylen(const KeyType *key);
     void W_Base(IndexType index, IndexType val);
     void W_Check(IndexType index, IndexType val);
@@ -63,6 +66,9 @@ private:
     void Delete(IndexType index);
 
     void ConstructUnusedList();
+
+    vector<string> static_keys;
+    void StaticInsert(IndexType s, int depth, int start, int end);
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
@@ -119,6 +125,7 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
     this->term = term;
     this->max = max;
     this->e_head = 0;
+    this->initialized = 0;
 }
 
 template <class IndexType, class KeyType>
@@ -404,6 +411,64 @@ void DoubleArray<IndexType, KeyType>::ConstructUnusedList()
     check[r[r.size()-1]] = -(da_size + 1);
 }
 
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::StaticInsert(IndexType s, int depth, int start, int end)
+{
+    KeyType c;
+    vector<KeyType> cs;
+    IndexType tmp_base = 1;
+
+    for (int i=start; i<=end; i++) {
+	if (static_keys[i][depth] != c) {
+	    c = static_keys[i][depth];
+	    cs.push_back (c);
+	}
+    }
+
+    // determine the base value
+    while (1) {
+	int ok = 1;
+
+	for (int i=0; i<cs.size(); i++) {
+	    if (check[tmp_base + cs[i]] != 0) {
+		ok = 0;
+		break;
+	    }
+	}
+
+	if (ok)
+	    break;
+
+	tmp_base++;
+    }
+    base[s] = tmp_base;
+
+    // create node
+    for (int i=0; i<cs.size(); i++) {
+	IndexType t = base[s] + cs[i];
+	check[t] = s;
+	if (t > da_size)
+	    da_size = t;
+    }
+
+    int n_start = start;
+    int j = start;
+    for (int i=0; i<cs.size(); i++) {
+	while (j < static_keys.size() &&
+	       static_keys[j][depth] == cs[i]) {
+	    j++;
+	}
+
+	if (cs[i] == term) {
+	    base[base[s] + cs[i]] = -1;
+	} else {
+	    StaticInsert (base[s] + cs[i], depth+1, n_start, j-1);
+	}
+
+	n_start = j;
+    }
+}
+
 /*
  * This method check if a key is included in this double
  * If the specified key is found in this trie, this method returns
@@ -417,6 +482,9 @@ void DoubleArray<IndexType, KeyType>::ConstructUnusedList()
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::Search(const KeyType *a)
 {
+    if (!initialized)
+	return 0;
+
     // (D-1)
     IndexType index = 1;
     IndexType pos = 1;
@@ -461,6 +529,7 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 //	    if (e_head == 0)
 //		ConstructUnusedList ();
 
+	    initialized = 1;
 	    return 1;
 	} else {
 	    index = t;
@@ -483,6 +552,9 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::Remove(const KeyType *a)
 {
+    if (!initialized)
+	return 0;
+
     // (D-1)
     IndexType index = 1;
     IndexType pos = 1;
@@ -529,10 +601,26 @@ int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
 	if (len >= 1)
 	{
 	    word[len-1] = term; /* replace '\n' with terminal symbol */
-	    count += Add (word);
+	    if (initialized) {
+		// dynamic insertion
+		count += Add (word);
+	    } else {
+		// static insertion
+		static_keys.push_back (word);
+	    }
 	}
     }
     fclose (f);
+
+    if (!initialized) {
+	// Todo: sort static_keys
+
+	// static insertion
+	StaticInsert (1, 0, 0, static_keys.size()-1);
+
+	static_keys.clear();
+	initialized = 1;
+    }
 
     return count;
 }
