@@ -22,6 +22,10 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <iostream>
+#include <list>
+using namespace std;
+
 #include "MappedArray.hpp"
 #include "DoubleArray.hpp"
 

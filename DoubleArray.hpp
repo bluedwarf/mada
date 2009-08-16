@@ -25,6 +25,7 @@
  *
  * Warning:
  *  IndexType must be signed value.
+ *  KeyType must be unsigned value.
  */
 
 #ifndef _MADA_DOUBLE_ARRAY_HPP_
@@ -65,7 +66,8 @@ private:
     void W_Check(IndexType index, IndexType val);
     IndexType X_Check(list<KeyType> &A);
     int Forward(IndexType s, KeyType a);
-    list<IndexType> GetLabel(IndexType index);
+    list<KeyType> GetLabel(IndexType index);
+    void Modify(IndexType index, list<KeyType> &R, KeyType b);
     void Insert(IndexType index, IndexType pos, const KeyType *a);
 public:
     DoubleArray(const char *basefile,
@@ -200,17 +202,71 @@ int DoubleArray<IndexType, KeyType>::Forward(IndexType s, KeyType a)
     IndexType t;
 
     t = base[s] + a;
-    if (0 < t && t < da_size+1 &&
-	check[t] == s)
+    if (0 < t && t < da_size+1 && check[t] == s)
 	return t;
     else
 	return 0;
 }
 
 template <class IndexType, class KeyType>
-list<IndexType> DoubleArray<IndexType, KeyType>::GetLabel(IndexType index)
+list<KeyType> DoubleArray<IndexType, KeyType>::GetLabel(IndexType index)
 {
-    
+    IndexType t;
+    list<KeyType> ret;
+
+    if (index <= 0)
+	return ret;
+
+    for (KeyType a=1; a<=max; a++)
+    {
+	t = base[index] + a;
+	if (0 < t && t < da_size+1 && check[t] == index)
+	    ret.push_back (a);
+
+	// For signed value.
+	// e.g.
+	//    * KeyType is char.
+	//    * max is 127.
+	//      => This loop would be the infinite loop without the following
+	//         break condition.
+	if (a == max)
+	    break;
+    }
+
+    return ret;
+}
+
+template <class IndexType, class KeyType>
+void DoubleArray<IndexType, KeyType>::Modify(IndexType index, list<KeyType> &R, KeyType b)
+{
+    // (M-1)
+    IndexType oldbase = base[index];
+
+    list<KeyType> tmp = R;
+    tmp.push_back (b);
+    W_Base (index, X_Check (tmp));
+
+    // (M-2)
+    typename list<KeyType>::iterator c = R.begin();
+    while (c != R.end()) {
+	IndexType t = base[index] + (*c);
+	W_Check (t, index);
+
+	IndexType old_t = oldbase + (*c);
+	W_Base (t, base[old_t]);
+
+	if (base[old_t] > 0) {
+	    // (M-3)
+	    for (IndexType q=1; q<=da_size; q++)
+		if (check[q] == old_t)
+		    W_Check (q, t);
+	}
+
+	base[old_t] = 0;
+	check[old_t] = 0;
+
+	c++;
+    }
 }
 
 template <class IndexType, class KeyType>
@@ -220,8 +276,8 @@ void DoubleArray<IndexType, KeyType>::Insert(IndexType index, IndexType pos, con
 
     // (I-1)
     if (check[base[index] + a[pos-1]] > 0) {
-	// ToDo: Implement (I-1) in reference [3].
-	fprintf (stderr, "Error\n");
+	list<KeyType> R = GetLabel (index);
+	Modify (index, R, a[pos-1]);
     }
 
     // (I-2)
