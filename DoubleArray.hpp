@@ -133,7 +133,8 @@ DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 template <class IndexType, class KeyType>
 DoubleArray<IndexType, KeyType>::~DoubleArray()
 {
-
+    base.truncate(DA_SIZE+1);
+    check.truncate(DA_SIZE+1);
 }
 
 template <class IndexType, class KeyType>

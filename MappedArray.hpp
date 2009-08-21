@@ -22,8 +22,9 @@
 #ifndef _MADA_MAPPED_ARRAY_HPP_
 #define _MADA_MAPPED_ARRAY_HPP_
 
-#define INITIAL_MAPPED_SIZE (1024)
-#define RESIZE_SIZE (1024)
+//#define INITIAL_MAPPED_SIZE (4096)
+#define INITIAL_MAPPED_SIZE (4096*25)
+#define RESIZE_SIZE (4096)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,7 +44,7 @@ private:
     T* array;
     int fd;
     size_t mapped_size;
-    size_t size;
+//    size_t size;
 
     // Copy is forbidden.
     MappedArray(const MappedArray &a);
@@ -55,6 +56,7 @@ public:
     ~MappedArray() throw (int);
 
     void clear() throw (int);
+    void truncate(size_t size) throw (int);
     T &operator[](size_t i) throw (int);
 };
 
@@ -84,11 +86,12 @@ MappedArray<T>::MappedArray (const char *filename) throw (int)
         }
 
         mapped_size = INITIAL_MAPPED_SIZE;
-        size = 0;
+//	size = 0;
     } else {
         // Open the existing file as an array.
 
-        mapped_size = size = st.st_size / sizeof(T);
+//	mapped_size = size = st.st_size / sizeof(T);
+	mapped_size = st.st_size / sizeof(T);
         if ((fd = open(filename, O_RDWR)) == -1)
             throw 4; // Failed to open the specified file.
     }
@@ -110,11 +113,15 @@ MappedArray<T>::~MappedArray() throw (int)
     if (munmap(array, mapped_size * sizeof(T)) == -1)
         throw 2; // Failed to release the allocated array.
 
-    if (ftruncate(fd, size * sizeof(T)) == -1)
-        throw 3; // Failed to truncate the file size.
-
     if (close(fd) == -1)
-        throw 4; // Failed to close the specified file.
+        throw 3; // Failed to close the specified file.
+}
+
+template <class T>
+void MappedArray<T>::truncate(size_t size) throw (int)
+{
+    if (ftruncate(fd, size * sizeof(T)) == -1)
+	throw 1; // Failed to truncate the file size.
 }
 
 template <class T>
@@ -137,7 +144,7 @@ void MappedArray<T>::clear() throw (int)
         throw 4; // Failed to write a new value.
 
     mapped_size = INITIAL_MAPPED_SIZE;
-    size = 0;
+//    size = 0;
 
     array = (T *) mmap(NULL, mapped_size * sizeof(T), PROT_READ | PROT_WRITE,
                        MAP_SHARED, fd, 0);
@@ -172,6 +179,7 @@ inline void MappedArray<T>::resize(size_t new_size) throw (int)
 
     array = (T *) mmap(NULL, mapped_size * sizeof(T), PROT_READ | PROT_WRITE,
                        MAP_SHARED, fd, 0);
+
     if (array == MAP_FAILED)
         throw 5; // Failed to remap the specified file to an array.
 }
@@ -179,20 +187,20 @@ inline void MappedArray<T>::resize(size_t new_size) throw (int)
 template <class T>
 T &MappedArray<T>::operator[] (size_t i) throw (int)
 {
-    if (i >= size) {
-        if (mapped_size <= i) {
-            try {
-                resize(i+1);
-            } catch(int e) {
-                throw e;
-            }
-        }
+//    if (i >= size) {
+//        if (mapped_size <= i) {
+//            try {
+//                resize(i+1);
+//            } catch(int e) {
+//                throw e;
+//            }
+//        }
 
-        for (int j=size; j<=i; j++)
-            array[j] = 0;
+//        for (int j=size; j<=i; j++)
+//            array[j] = 0;
 
-        size = i + 1;
-    }
+//        size = i + 1;
+//    }
 
     return array[i];
 }
