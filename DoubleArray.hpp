@@ -37,6 +37,7 @@
 #include "MappedArray.hpp"
 
 #define DA_SIZE (check[0])
+#define NUM_KEY (base[0])
 
 using namespace std;
 
@@ -47,14 +48,12 @@ template <class IndexType, class KeyType> class DoubleArray
 private:
     MappedArray<IndexType> base;
     MappedArray<IndexType> check;
-    MappedArray<KeyType> tail;
-    IndexType tail_pos;
     KeyType term; // terminal symbol
     KeyType max; // the maximal value of KeyType
 
     IndexType e_head;
 
-    int ready;
+    int keys;
 
     int keylen(const KeyType *key);
     void W_Base(IndexType index, IndexType val);
@@ -73,7 +72,6 @@ private:
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
-		const char *tailfile,
 		IndexType pos,
 		KeyType term,
 		KeyType max,
@@ -92,34 +90,22 @@ public:
 template <class IndexType, class KeyType>
 DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 					     const char *checkfile,
-					     const char *tailfile,
 					     IndexType pos,
 					     KeyType term,
 					     KeyType max,
 					     int initialize) :
     base(basefile),
-    check(checkfile),
-    tail(tailfile)
+    check(checkfile)
 {
     if (initialize)
     {
 	base.clear();
-	base[0] = 0; /* undefiend */
+	NUM_KEY = 0; /* base[0] is used for the number of keys */
 	base[1] = 1;
 
 	check.clear();
-	check[0] = 1; /* used for da_size */
+	DA_SIZE = 1; /* check[0] is used for the size of double array. */
 	check[1] = 0;
-
-	tail.clear();
-	tail[0] = 0; /* undefined */
-	this->tail_pos = 1;
-	this->ready = 0;
-    }
-    else
-    {
-	this->tail_pos = pos;
-	this->ready = 1;
     }
 
     if (term <= 0)
@@ -545,7 +531,7 @@ void DoubleArray<IndexType, KeyType>::StaticInsert(IndexType s, int depth, int s
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::Search(const KeyType *a)
 {
-    if (!ready)
+    if (!NUM_KEY)
 	return 0;
 
     // (D-1)
@@ -592,7 +578,7 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 	    if (e_head == 0)
 		ConstructUnusedList ();
 
-	    ready = 1;
+	    NUM_KEY = NUM_KEY + 1;
 	    return 1;
 	} else {
 	    index = t;
@@ -615,7 +601,7 @@ IndexType DoubleArray<IndexType, KeyType>::Add(const KeyType *a)
 template <class IndexType, class KeyType>
 IndexType DoubleArray<IndexType, KeyType>::Remove(const KeyType *a)
 {
-    if (!ready)
+    if (!NUM_KEY)
 	return 0;
 
     // (D-1)
@@ -664,7 +650,7 @@ int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
 	if (len >= 1)
 	{
 	    word[len-1] = term; /* replace '\n' with terminal symbol */
-//	    if (ready) {
+//	    if (NUM_KEY) {
 		// dynamic insertion
 		count += Add (word);
 /*
@@ -681,7 +667,7 @@ int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
     fclose (f);
 
 /*
-    if (!ready) {
+    if (!NUM_KEY) {
 	// Todo: sort static_keys and delete duplicated keys.
 
 	// static insertion

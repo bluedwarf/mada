@@ -48,7 +48,6 @@ void launchConsole(int init)
     // initialize double array
     mada::DoubleArray<int, char> da("mem/base",
 				    "mem/check",
-				    "mem/tail",
 				    1, term, 127, init);
 
     while (1) {
