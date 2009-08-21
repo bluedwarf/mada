@@ -621,6 +621,7 @@ IndexType DoubleArray<IndexType, KeyType>::Remove(const KeyType *a)
     } while (base[index] >= 0); // (D-3)
 
     Delete (index);
+    NUM_KEY = NUM_KEY - 1;
     return 1;
 }
 
@@ -719,6 +720,7 @@ void DoubleArray<IndexType, KeyType>::printInfo()
     printf ("Size of index: %d bytes\n", sizeof(IndexType));
     printf ("Size of array: %d (%d bytes)\n",
 	    DA_SIZE, DA_SIZE*sizeof(IndexType)*2);
+    printf ("The number of keys: %d\n", NUM_KEY);
 }
 
 }
