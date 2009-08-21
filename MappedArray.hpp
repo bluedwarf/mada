@@ -22,8 +22,8 @@
 #ifndef _MADA_MAPPED_ARRAY_HPP_
 #define _MADA_MAPPED_ARRAY_HPP_
 
-//#define INITIAL_MAPPED_SIZE (4096)
-#define INITIAL_MAPPED_SIZE (4096*25)
+#define INITIAL_MAPPED_SIZE (4096)
+//#define INITIAL_MAPPED_SIZE (4096*25)
 #define RESIZE_SIZE (4096)
 
 #include <stdio.h>
@@ -55,6 +55,7 @@ public:
     MappedArray(const char *filename) throw (int);
     ~MappedArray() throw (int);
 
+    void expand_to(size_t size) throw (int);
     void clear() throw (int);
     void truncate(size_t size) throw (int);
     T &operator[](size_t i) throw (int);
@@ -169,6 +170,8 @@ inline void MappedArray<T>::resize(size_t new_size) throw (int)
 
     if (lseek (fd, mapped_size * sizeof(T), SEEK_SET) < 0)
         throw 3; // Failed to expand the file size.
+    // Note that: this makes sure that the new allocated memories
+    //            are initialized by 0.
 
     T c;
     if (read(fd, &c, sizeof(T)) == -1)
@@ -182,6 +185,14 @@ inline void MappedArray<T>::resize(size_t new_size) throw (int)
 
     if (array == MAP_FAILED)
         throw 5; // Failed to remap the specified file to an array.
+}
+
+template <class T>
+void MappedArray<T>::expand_to (size_t size) throw (int)
+{
+    if (mapped_size <= size) {
+	resize(size+1);
+    }
 }
 
 template <class T>

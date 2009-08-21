@@ -138,13 +138,19 @@ template <class IndexType, class KeyType>
 void DoubleArray<IndexType, KeyType>::W_Base(IndexType index, IndexType val)
 {
     if (e_head == 0) {
-	base[index] = val;
-
-	if (index > DA_SIZE)
+	if (index > DA_SIZE) {
 	    DA_SIZE = index;
+	    base.expand_to(DA_SIZE);
+	    check.expand_to(DA_SIZE);
+	}
+
+	base[index] = val;
     } else {
 	// update unused element list
 	if (index > DA_SIZE) {
+	    base.expand_to(index);
+	    check.expand_to(index);
+
 	    // (W-1)
 	    IndexType e_index;
 
@@ -171,13 +177,19 @@ inline void DoubleArray<IndexType, KeyType>::W_Check(IndexType index, IndexType 
 {
     if (e_head == 0) {
 	// unused element list is not in use.
-	check[index] = val;
-
-	if (index > DA_SIZE)
+	if (index > DA_SIZE) {
 	    DA_SIZE = index;
+	    base.expand_to(DA_SIZE);
+	    check.expand_to(DA_SIZE);
+	}
+
+	check[index] = val;
     } else {
 	// update unused element list
 	if (index > DA_SIZE) {
+	    base.expand_to(index);
+	    check.expand_to(index);
+
 	    // (W-1)
 	    IndexType e_index;
 
@@ -263,7 +275,7 @@ inline IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
 	    if (q >= 1) {
 		int ok = 1;
 		while (c != A.end()) {
-		    if (check[q+(*c)] > 0) {
+		    if (q+(*c) <= DA_SIZE && check[q+(*c)] > 0) {
 			ok = 0;
 			break;
 		    }
@@ -297,7 +309,7 @@ inline IndexType DoubleArray<IndexType, KeyType>::X_Check(list<KeyType> &A)
 
 	    typename list<KeyType>::iterator c = A.begin();
 	    while (c != A.end()) {
-		if (check[q+(*c)] > 0) {
+		if (q+(*c) <= DA_SIZE && check[q+(*c)] > 0) {
 		    ok = 0;
 		    break;
 		}
@@ -403,15 +415,17 @@ template <class IndexType, class KeyType>
 void DoubleArray<IndexType, KeyType>::Insert(IndexType index, IndexType pos, const KeyType *a)
 {
     int n = keylen (a);
+    IndexType t = base[index] + a[pos-1];
 
     // (I-1)
-    if (check[base[index] + a[pos-1]] > 0) {
+    if (t <= DA_SIZE && check[t] > 0) {
 	list<KeyType> R = GetLabel (index);
 	Modify (index, R, a[pos-1]);
+
+	t = base[index] + a[pos-1];
     }
 
     // (I-2)
-    IndexType t = base[index] + a[pos-1];
     W_Check (t, index);
     index = t;
     pos++;
