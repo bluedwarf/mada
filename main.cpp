@@ -130,7 +130,7 @@ void launchConsole(int init)
 		{
 		    key[len-1] = term; /* replace '\n' with terminal symbol */
 		    if (da.Search (key)) {
-			printf("FOUND \"%s\".\n", key);
+		      //			printf("FOUND \"%s\".\n", key);
 		    } else {
 			printf("Failed to find \"%s\".\n", key);
 		    }

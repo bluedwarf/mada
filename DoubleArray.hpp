@@ -399,9 +399,11 @@ inline void DoubleArray<IndexType, KeyType>::Modify(IndexType index, list<KeyTyp
 
 	if (base[old_t] > 0) {
 	    // (M-3)
-	    for (q=1; q<=DA_SIZE; q++)
-		if (check[q] == old_t)
-		    W_Check (q, t);
+
+	  //	    for (q=1; q<=DA_SIZE; q++)
+	  for (q=base[old_t]+1; q<=base[old_t]+max; q++)
+	    if (check[q] == old_t)
+	      W_Check (q, t);
 	}
 
 	base[old_t] = 0;
