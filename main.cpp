@@ -56,7 +56,7 @@ void launchConsole(int init)
     // initialize double array
     mada::DoubleArray<int, unsigned char> da("mem/base",
 					     "mem/check",
-					     1, term, 255, init);
+					     term, 255, init);
 
     while (1) {
 	printf("> ");

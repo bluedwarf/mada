@@ -69,7 +69,6 @@ private:
 public:
     DoubleArray(const char *basefile,
 		const char *checkfile,
-		IndexType pos,
 		KeyType term,
 		KeyType max,
 		int initialize);
@@ -87,7 +86,6 @@ public:
 template <class IndexType, class KeyType>
 DoubleArray<IndexType, KeyType>::DoubleArray(const char *basefile,
 					     const char *checkfile,
-					     IndexType pos,
 					     KeyType term,
 					     KeyType max,
 					     int initialize) :
