@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     FILE *f;
     GHashTable *hash;
 
-//    g_mem_set_vtable (glib_mem_profiler_table);
+    g_mem_set_vtable (glib_mem_profiler_table);
 
     if (argc < 2) {
 	fprintf (stderr, "Specify the word list file.\n");
@@ -34,14 +34,14 @@ int main(int argc, char *argv[])
 	key[len-1] = '\0';
 
 	if (len >= 1)
-	    g_hash_table_insert (hash, g_strdup(key), GINT_TO_POINTER(1));
+	  g_hash_table_insert (hash, g_strdup(key), GINT_TO_POINTER(1));
     }
     clock_t end = clock();
 
     printf ("Inserting time: %f sec\n", (float)(end-start)/(float)CLOCKS_PER_SEC);
     fclose (f);
 
-//    g_mem_profile();
+    g_mem_profile();
 
     // look up
 

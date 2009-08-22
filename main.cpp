@@ -150,6 +150,8 @@ void launchConsole(int init)
 		return;
 	    }
 
+	    clock_t start = clock();
+
 	    while (fgets (key, 255, f)) {
 		size_t len = strlen (key);
 		
@@ -166,6 +168,10 @@ void launchConsole(int init)
 		    }
 		}
 	    }
+
+	    clock_t end = clock();
+
+	    printf ("%f sec\n", (float)(end-start)/(float)CLOCKS_PER_SEC);
 
 	    fclose (f);
 	} else if (strncmp (command, "dump\n", 5) == 0) {

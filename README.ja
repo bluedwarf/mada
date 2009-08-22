@@ -37,3 +37,74 @@ GNU Lesser General Public License version 3 を適用する。
  starts with "0". Be careful, some indices in this implementation are
  different from counterparts of reference [1] or [2].
 
+=== Comparative experiments ===
+
+== Experiment environment ==
+
+Computer: Asus EeePC 701
+OS: Fedora 11
+CPU: Intel Celeron M processor 900MHz
+Memory: 512MB
+Compiler: gcc 4.4.1 20090725 (Red Hat 4.4.1-2)
+Compiler optoin for optimization: -O3
+
+== Resource ==
+
+1. English words
+
+  Name: Ispell English Word List 
+  URL: http://wordlist.sourceforge.net/
+  Archive: ispell-enwl-3.1.20.tar.gz
+  words #: 125346
+  Size: 1204323 byte (1.2 MB)
+  Note: In this experiment, the words listed in english.[1234] were used.
+        The word list were concatenated into one file and sorted beforehand.
+  Terminal character for Double Array: \n (0x0a)
+
+2: Japanese words
+
+  Name: Cannadic
+  URL: http://cannadic.oucrc.org/
+  Archive: cannadic-0.95c.tar.gz
+  words #: 91668
+  Size: 992576 (970K)
+  Note: In this experiment, the words listed in gcanna.ctd were used.
+        The word list were extracted from gcanna.ctd.
+  Terminal character for Double Array: \n (0x0a)
+   
+
+-- 2009/08/22 --
+
+Insertion speed:
+ (Inserted all words from scratch.)
+
+|----------+---------------+----------------|
+|          | English words | Japanese words |
+|----------+---------------+----------------|
+|mada      |      0.80 sec |       0.98 sec |
+|----------+---------------+----------------|
+|hash(glib)|      0.26 sec |       0.16 sec |
+|----------+---------------+----------------|
+
+Search speed:
+ (After all words were inserted, each of them are searched once.)
+
+|----------+---------------+----------------|
+|          | English words | Japanese words |
+|----------+---------------+----------------|
+|mada      |      0.10 sec |       0.08 sec |
+|----------+---------------+----------------|
+|hash(glib)|      0.12 sec |       0.10 sec |
+|----------+---------------+----------------|
+
+Memory usage:
+  mada: the total size of base and check array
+  hash(glib): the result from g_mem_profile()
+
+|----------+---------------+----------------|
+|          | English words | Japanese words |
+|----------+---------------+----------------|
+|mada      | 4560102 bytes |  4509816 bytes |
+|----------+---------------+----------------|
+|hash(glib)| 4353615 bytes |  4570107 bytes |
+|----------+---------------+----------------|
