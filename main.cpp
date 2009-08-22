@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <time.h>
+#include <limits.h>
 
 #include "MappedArray.hpp"
 #include "DoubleArray.hpp"
@@ -51,12 +52,12 @@ void launchConsole(int init)
     char command[256];
     char key[256];
     unsigned char ukey[256];
-    char term = '#';
+    char term = '\n';
 
     // initialize double array
     mada::DoubleArray<int, unsigned char> da("mem/base",
 					     "mem/check",
-					     term, 255, init);
+					     term, UCHAR_MAX, init);
 
     while (1) {
 	printf("> ");
@@ -157,8 +158,10 @@ void launchConsole(int init)
 		    key[len-1] = term; /* replace '\n' with terminal symbol */
 		    s2us (ukey, key);
 		    if (da.Search (ukey)) {
-		      //			printf("FOUND \"%s\".\n", key);
+//			key[len-1] = '\0';
+//			printf("FOUND \"%s\".\n", key);
 		    } else {
+			key[len-1] = '\0';
 			printf("Failed to find \"%s\".\n", key);
 		    }
 		}
