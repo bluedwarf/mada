@@ -65,9 +65,6 @@ private:
     void Insert(IndexType index, IndexType pos, const KeyType *a);
     void Delete(IndexType index);
 
-    vector<string> static_keys;
-    void StaticInsert(IndexType s, int depth, int start, int end);
-
     void ConstructUnusedList();
 public:
     DoubleArray(const char *basefile,
@@ -476,64 +473,6 @@ void DoubleArray<IndexType, KeyType>::ConstructUnusedList()
     check[r[r.size()-1]] = -(DA_SIZE + 1);
 }
 
-template <class IndexType, class KeyType>
-void DoubleArray<IndexType, KeyType>::StaticInsert(IndexType s, int depth, int start, int end)
-{
-    KeyType c;
-    vector<KeyType> cs;
-    IndexType tmp_base = 1;
-
-    for (int i=start; i<=end; i++) {
-	if (static_keys[i][depth] != c) {
-	    c = static_keys[i][depth];
-	    cs.push_back (c);
-	}
-    }
-
-    // determine the base value
-    while (1) {
-	int ok = 1;
-
-	for (int i=0; i<cs.size(); i++) {
-	    if (check[tmp_base + cs[i]] != 0) {
-		ok = 0;
-		break;
-	    }
-	}
-
-	if (ok)
-	    break;
-
-	tmp_base++;
-    }
-    base[s] = tmp_base;
-
-    // create node
-    for (int i=0; i<cs.size(); i++) {
-	IndexType t = base[s] + cs[i];
-	check[t] = s;
-	if (t > DA_SIZE)
-	    DA_SIZE = t;
-    }
-
-    int n_start = start;
-    int j = start;
-    for (int i=0; i<cs.size(); i++) {
-	while (j < static_keys.size() &&
-	       static_keys[j][depth] == cs[i]) {
-	    j++;
-	}
-
-	if (cs[i] == term) {
-	    base[base[s] + cs[i]] = -1;
-	} else {
-	    StaticInsert (base[s] + cs[i], depth+1, n_start, j-1);
-	}
-
-	n_start = j;
-    }
-}
-
 /*
  * This method check if a key is included in this double
  * If the specified key is found in this trie, this method returns
@@ -654,6 +593,7 @@ int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
     int len;
     int count = 0;
     char word[256];
+    unsigned char uword[256];
     FILE *f;
 
     f = fopen (file, "r");
@@ -667,33 +607,14 @@ int DoubleArray<IndexType, KeyType>::loadWordList(const char *file)
 	if (len >= 1)
 	{
 	    word[len-1] = term; /* replace '\n' with terminal symbol */
-//	    if (NUM_KEY) {
-		// dynamic insertion
-		count += Add (word);
-/*
-	    } else {
-	    // ToDo: not to read every words in memory...
-	    //       it takes very very long time if the number of keys
-	    //       is more than 1000.
-		// static insertion
-		static_keys.push_back (word);
-	    }
-*/
+	    for (size_t i=0; i<=len; i++)
+	      uword[i] = static_cast<unsigned char>(word[i]);
+
+	    count += Add (uword);
 	}
     }
     fclose (f);
 
-/*
-    if (!NUM_KEY) {
-	// Todo: sort static_keys and delete duplicated keys.
-
-	// static insertion
-	StaticInsert (1, 0, 0, static_keys.size()-1);
-
-	static_keys.clear();
-	ready = 1;
-    }
-*/
     return count;
 }
 

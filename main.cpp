@@ -25,6 +25,13 @@
 #include "MappedArray.hpp"
 #include "DoubleArray.hpp"
 
+void s2us(unsigned char *dest, const char *src)
+{
+    size_t len = strlen(src);
+    for (size_t i=0; i<=len; i++)
+	dest[i] = static_cast<unsigned char>(src[i]);
+}
+
 void printConsoleHelp()
 {
     printf ("===== COMMAND LIST =====\n\n");
@@ -43,12 +50,13 @@ void launchConsole(int init)
 {
     char command[256];
     char key[256];
+    unsigned char ukey[256];
     char term = '#';
 
     // initialize double array
-    mada::DoubleArray<int, char> da("mem/base",
-				    "mem/check",
-				    1, term, 127, init);
+    mada::DoubleArray<int, unsigned char> da("mem/base",
+					     "mem/check",
+					     1, term, 255, init);
 
     while (1) {
 	printf("> ");
@@ -64,9 +72,10 @@ void launchConsole(int init)
 
 	    int len = strlen (key);
 	    key[len-1] = term; // replace '\n' with the terminal symbol.
+	    s2us (ukey, key);
 
 	    clock_t start = clock();
-	    int res = da.Add (key);
+	    int res = da.Add (ukey);
 	    clock_t end = clock();
 
 	    if (res) {
@@ -80,8 +89,9 @@ void launchConsole(int init)
 
 	    int len = strlen (key);
 	    key[len-1] = term; // replace '\n' with the terminal symbol.
+	    s2us (ukey, key);
 
-	    if (da.Remove (key))
+	    if (da.Remove (ukey))
 		printf("DELETED \"%s\".\n", key);
 	    else
 		printf("Failed to delete \"%s\".\n", key);
@@ -90,33 +100,49 @@ void launchConsole(int init)
  	    strcpy (key, command + 7);
 
 	    int len = strlen (key);
-	    key[len-1] = term; // replace '\n' with the terminal symbol.
+	    ukey[len-1] = term; // replace '\n' with the terminal symbol.
+	    s2us (ukey, key);
 
-	    if (da.Search (key))
+	    if (da.Search (ukey))
 		printf("FOUND \"%s\".\n", key);
 	    else
 		printf("Failed to find \"%s\".\n", key);
 	} else if (strncmp (command, "load ", 5) == 0 &&
 		   command[5] != '\0') {
 	    strcpy (key, command + 5);
+	    key[strlen(key)-1] = '\0';
 
-	    int len = strlen (key);
-	    key[len-1] = '\0'; // replace '\n' with '\0'
+	    FILE *f = fopen (key, "r");
+	    if (!f) {
+		printf ("Failed to open %s\n", key);
+		return;
+	    }
 
+	    int count = 0;
 	    clock_t start = clock();
-	    int count = da.loadWordList (key);
+
+	    while (fgets (key, 255, f))
+	    {
+		size_t len = strlen (key);
+
+		if (len >= 1)
+		{
+		    key[len-1] = term; /* replace '\n' with terminal symbol */
+		    s2us (ukey, key);
+		    count += da.Add (ukey);
+		}
+	    }
+	    fclose (f);
+
 	    clock_t end = clock();
 
-	    if (count == -1)
-		printf ("Failed to open %s\n", key);
-	    else {
-		printf ("Added %d keys\n", count);
-		printf ("%f sec\n", (float)(end-start)/(float)CLOCKS_PER_SEC);
-	    }
+	    printf ("Added %d keys\n", count);
+	    printf ("%f sec\n", (float)(end-start)/(float)CLOCKS_PER_SEC);
 	} else if (strncmp (command, "search_file ", 12) == 0 &&
 		   command[12] != '\0') {
 	    strcpy (key, command + 12);
 	    key[strlen(key)-1] = '\0';
+
 	    FILE *f = fopen (key, "r");
 	    if (!f) {
 		printf ("Failed to open %s\n", key);
@@ -129,7 +155,8 @@ void launchConsole(int init)
 		if (len >= 1)
 		{
 		    key[len-1] = term; /* replace '\n' with terminal symbol */
-		    if (da.Search (key)) {
+		    s2us (ukey, key);
+		    if (da.Search (ukey)) {
 		      //			printf("FOUND \"%s\".\n", key);
 		    } else {
 			printf("Failed to find \"%s\".\n", key);
