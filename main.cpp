@@ -55,8 +55,8 @@ void launchConsole(int init)
     char term = '\n';
 
     // initialize double array
-    mada::DoubleArray<int, unsigned char> da("mem/base",
-					     "mem/check",
+    mada::DoubleArray<int, unsigned char> da("base",
+					     "check",
 					     term, UCHAR_MAX, init);
 
     while (1) {
